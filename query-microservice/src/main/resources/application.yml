@@ -1,0 +1,73 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: query-microservice
+
+  profiles:
+    active: development
+
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    generate-ddl: true
+    show-sql: false
+
+  h2:
+    console:
+      enabled: true
+
+  zipkin:
+    kafka:
+      topic: zipkin
+    sender:
+      type: kafka
+
+  sleuth:
+    sampler:
+      rate: 10
+
+  cloud:
+    function:
+      definition: orderEventConsumer
+
+    stream:
+      default-binder: kafka
+      bindings:
+        orderEventConsumer-in-0:
+          destination: order-events-v1
+          group: query-service
+        adoptionEventSupplier-out-0:
+          destination: adoption-events-v1
+
+      kafka:
+        binder:
+          brokers: localhost:9092
+          replication-factor: 1
+          auto-create-topics: true
+
+      source: adoptionEventSupplier
+
+  kafka:
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include:
+          - mappings
+          - scheduledtasks
+          - info
+          - metrics
+          - prometheus
+          - health
