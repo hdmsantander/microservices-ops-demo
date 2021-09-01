@@ -12,11 +12,11 @@ import mx.hdmsantander.opsdemo.query.model.Pet;
 @AllArgsConstructor
 public class AdoptionEvent {
 	
-	String petId;
+	private String petId;
 
-	String name;
+	private String name;
 	
-	String dateOfAdoption;
+	private String dateOfAdoption;
 	
 	public static AdoptionEvent createEventFromPet(Pet pet, String date) {
 		return AdoptionEvent.builder()
