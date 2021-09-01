@@ -29,7 +29,7 @@ This microservice performs queries to the inventory microservice and the pet sho
 - `GET /v1/pet` This operation queries the list of pets from the pet shop API and returns the results.
 - `POST /v1/pet/{id}/adopt` This operation performs the "adoption" of a pet from the shop. It requires a valid ID from the pet shop and it triggers an adoption event, which is consumed by the inventory microservice, which then in turn emits an event.
 
-The Swagger page is accesible at [http://localhost:8080](http://localhost:8080)
+The Swagger page is accesible at [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
 
 ## Inventory microservice
 
@@ -41,7 +41,7 @@ This microservice performs queries to the pet shop API. This service is used by 
 
 It also performs a scheduled query of the inventory of the pet shop API to "update" the inventory of the shop in the microservice ecosystem. The service performs a query of orders (generated randomly as integers in the range of 1-10) to the [orders endpoint](https://petstore.swagger.io/v2/store/order) of the pet shop API, triggering an event if the order exists, this event is consumed by the query microservice which in turn updates the entity in question in its database.
 
-The Swagger page is accesible at [http://localhost:8079](http://localhost:8079)
+The Swagger page is accesible at [http://localhost:8079/swagger-ui.html](http://localhost:8079/swagger-ui.html)
 
 ## Prometheus server
 
