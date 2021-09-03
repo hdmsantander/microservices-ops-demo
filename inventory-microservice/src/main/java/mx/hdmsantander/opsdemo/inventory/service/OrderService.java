@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
+import io.micrometer.core.annotation.Timed;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import mx.hdmsantander.opsdemo.inventory.dto.OrderDto;
 import mx.hdmsantander.opsdemo.inventory.event.OrderEventSender;
@@ -28,6 +30,10 @@ public class OrderService {
 	@Autowired
 	private OrderEventSender orderEventService;
 
+	@Autowired
+	private MeterRegistry meterRegistry;
+
+	@Timed(value = "orders.query.time", description = "Time taken to query the pet shop API to refresh orders")
 	@Retryable(include = ResourceAccessException.class, maxAttempts = 3, backoff = @Backoff(delay = 500, multiplier = 2))
 	public void updateOrders() {
 
@@ -52,6 +58,7 @@ public class OrderService {
 				if (responseEntity.getStatusCode().is2xxSuccessful()) {
 
 					log.info("Request was successful! Emitting event to update orders!");
+					meterRegistry.counter("orders.updated").increment();
 					orderEventService.send(responseEntity.getBody());
 
 				}
@@ -61,7 +68,5 @@ public class OrderService {
 			}
 
 		}
-
 	}
-
 }

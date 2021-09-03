@@ -11,19 +11,15 @@ import mx.hdmsantander.opsdemo.query.model.Pet;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AdoptionEvent {
-	
+
 	private String petId;
 
 	private String name;
-	
+
 	private String dateOfAdoption;
-	
+
 	public static AdoptionEvent createEventFromPet(Pet pet, String date) {
-		return AdoptionEvent.builder()
-				.petId(pet.getId())
-				.name(pet.getName())
-				.dateOfAdoption(date)
-				.build();
+		return AdoptionEvent.builder().petId(pet.getId()).name(pet.getName()).dateOfAdoption(date).build();
 	}
-	
+
 }

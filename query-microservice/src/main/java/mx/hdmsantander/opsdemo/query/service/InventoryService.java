@@ -10,6 +10,7 @@ import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
+import io.micrometer.core.annotation.Timed;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -21,6 +22,7 @@ public class InventoryService {
 	@Autowired
 	private RestTemplate restTemplate;
 
+	@Timed(value = "inventory.query.time", description = "Time taken to get the inventory from the inventory service")
 	@Retryable(include = ResourceAccessException.class, maxAttempts = 3, backoff = @Backoff(delay = 500, multiplier = 2))
 	public JsonNode getInventory() {
 

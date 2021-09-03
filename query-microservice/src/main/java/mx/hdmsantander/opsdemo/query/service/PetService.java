@@ -14,6 +14,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
+import io.micrometer.core.annotation.Timed;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import mx.hdmsantander.opsdemo.query.event.AdoptionEventSender;
 import mx.hdmsantander.opsdemo.query.model.Pet;
@@ -27,11 +29,15 @@ public class PetService {
 
 	@Autowired
 	private RestTemplate restTemplate;
-	
+
 	@Autowired
 	private AdoptionEventSender adoptionEventSender;
 
+	@Autowired
+	private MeterRegistry meterRegistry;
+
 	@Retryable(include = ResourceAccessException.class, maxAttempts = 3, backoff = @Backoff(delay = 500, multiplier = 2))
+	@Timed(value = "pet.query.time", description = "Time taken to query and return the pet shop list for all pets")
 	public List<Pet> getPetListByStatus(PetStatus status) {
 
 		log.info("Retrieving all pets with status " + status.getCode() + " from the pet shop at: " + PET_SHOP_BASE_URL);
@@ -51,27 +57,34 @@ public class PetService {
 		return Arrays.stream(petArray).collect(Collectors.toList());
 
 	}
-	
-	public Pet adoptPetById(String id) {
-		
-		log.info("Adopting pet with the ID " + id + ". validating if it exists");
-		
-		Map<String, String> uriVariables = new HashMap<>();
-		uriVariables.put("id",id);
 
-		ResponseEntity<Pet> responseEntity = restTemplate
-				.getForEntity(PET_SHOP_BASE_URL + "/pet/{id}", Pet.class, uriVariables);
+	@Timed(value = "pet.adoption.time", description = "Time taken to adopt a pet")
+	public Pet adoptPetById(String id) {
+
+		log.info("Adopting pet with the ID " + id + ". validating if it exists");
+
+		Map<String, String> uriVariables = new HashMap<>();
+		uriVariables.put("id", id);
+
+		ResponseEntity<Pet> responseEntity = restTemplate.getForEntity(PET_SHOP_BASE_URL + "/pet/{id}", Pet.class,
+				uriVariables);
 
 		log.info("The request got back the status: " + responseEntity.getStatusCode());
 
+		if (!responseEntity.getStatusCode().is2xxSuccessful()) {
+			return null;
+		}
+
 		Pet pet = responseEntity.getBody();
-		
+
 		log.info("The pet exists! Sending adoption event for " + pet.getName());
-		
+
+		meterRegistry.counter("pet.adoptions").increment();
+
 		adoptionEventSender.send(pet);
-		
+
 		return pet;
-		
+
 	}
 
 }
