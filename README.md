@@ -28,6 +28,7 @@ This microservice performs queries to the inventory microservice and the pet sho
 - `GET /v1/inventory` This operation queries the inventory endpoint of the inventory microservice and returns the result.
 - `GET /v1/pet` This operation queries the list of pets from the pet shop API and returns the results.
 - `POST /v1/pet/{id}/adopt` This operation performs the "adoption" of a pet from the shop. It requires a valid ID from the pet shop and it triggers an adoption event, which is consumed by the inventory microservice, which then in turn emits an event.
+- `GET /v1/orders` This operation queries the service's database to get a list of all the orders currently registered in the system. The orders are created from events wich the inventory microservice emits.
 
 The Swagger page is accesible at [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
 
