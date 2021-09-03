@@ -50,14 +50,81 @@ The Swagger page is accesible at [http://localhost:8079/swagger-ui.html](http://
 
 The prometheus server is accesible at [http://localhost:9090](http://localhost:9090)
 
+### Example of metrics reported
+
+Here are some examples of the metrics registered.
+
+#### Orders updated in total
+
+In the [OrderService.java](https://github.com/hdmsantander/microservices-ops-demo/blob/a2718edffddaceb66ad7045835c7b0705419c365/inventory-microservice/src/main/java/mx/hdmsantander/opsdemo/inventory/service/OrderService.java#L58) there is a section of code that updates a _Counter_ style metric.
+
+```JAVA
+if (responseEntity.getStatusCode().is2xxSuccessful()) {
+  log.info("Request was successful! Emitting event to update orders!");
+  meterRegistry.counter("orders.updated").increment();
+  orderEventService.send(responseEntity.getBody());
+}
+```
+
+![Orders updated](.img/8.png)
+
+#### Time taken to adopt a pet
+
+In the [PetService.java](https://github.com/hdmsantander/microservices-ops-demo/blob/a2718edffddaceb66ad7045835c7b0705419c365/query-microservice/src/main/java/mx/hdmsantander/opsdemo/query/service/PetService.java#L61) there is an annotation that enables a _Timer_ style metric for the [method](https://github.com/hdmsantander/microservices-ops-demo/blob/a2718edffddaceb66ad7045835c7b0705419c365/query-microservice/src/main/java/mx/hdmsantander/opsdemo/query/service/PetService.java#L62) that performs pet adoptions.
+
+```JAVA
+@Timed(value = "pet.query.time", description = "Time taken to query and return the pet shop list for all pets")
+```
+
+![Orders updated](.img/9.png)
+
+#### Amount of orders in the system
+
+In the [PetShopOrderService.java](https://github.com/hdmsantander/microservices-ops-demo/blob/a2718edffddaceb66ad7045835c7b0705419c365/query-microservice/src/main/java/mx/hdmsantander/opsdemo/query/service/PetShopOrderService.java#L29) there is a _Gauge_ style metric that reports the size of the list containing all the orders currently in the query system's database.
+
+```JAVA
+private AtomicDouble orderCount = new AtomicDouble();
+
+	public List<PetShopOrder> getAllOrders() {
+
+		List<PetShopOrder> orders = StreamSupport.stream(petShopOrderRepository.findAll().spliterator(), false)
+				.collect(Collectors.toList());
+
+		orderCount.set(orders.size());
+
+		meterRegistry.gauge("orders.size", orderCount);
+
+		return orders;
+
+	}
+```
+
+![Orders updated](.img/10.png)
+
 ## Zipkin server
 
 ![Zipkin server](.img/4.png)
 
 The Zipkin server is accesible at [http://localhost:9411](http://localhost:9411)
 
+### Example of traces registered
+
+Here are some examples of the traces registered.
+
+#### Scheduled order retrieval
+
+The inventory microservice performs a scheduled retrieval of the orders in the pet shop API. If it finds an order, it emits an event that the query microservice consumes to update its database.
+
+![Refresh orders](.img/6.png)
+
+#### Pet adoption
+
+The query microservice performs a GET of the pet ID to the pet shop API, and if the ID of the pet exists it emits an event which in turn is consumed by the inventory microservice.
+
+![Adoption](.img/7.png)
+
 ## Kafka server
 
-An interface to see the topcs and events found in the kafka server is accesible at [http://localhost:3030](http://localhost:3030)
-
 ![Kafka server](.img/5.png)
+
+An interface to see the topcs and events found in the kafka server is accesible at [http://localhost:3030](http://localhost:3030)
