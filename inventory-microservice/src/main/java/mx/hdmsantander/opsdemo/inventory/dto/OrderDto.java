@@ -1,5 +1,9 @@
 package mx.hdmsantander.opsdemo.inventory.dto;
 
+import org.springframework.integration.support.MessageBuilder;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.Message;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,7 +19,7 @@ public class OrderDto {
 
 	private Integer id;
 
-	private Integer petId;
+	private String petId;
 
 	private Integer quantity;
 
@@ -25,9 +29,11 @@ public class OrderDto {
 
 	private Boolean complete;
 
-	public static OrderEvent createOrderEvent(OrderDto o) {
-		return OrderEvent.builder().id(o.getId()).petId(o.getPetId()).quantity(o.getQuantity())
-				.shipDate(o.getShipDate()).status(o.getStatus()).complete(o.getComplete()).build();
+	public static Message<OrderEvent> createOrderEvent(OrderDto o) {
+		return MessageBuilder.withPayload(OrderEvent.builder().id(o.getId()).petId(o.getPetId()).quantity(o.getQuantity())
+				.shipDate(o.getShipDate()).status(o.getStatus()).complete(o.getComplete()).build())
+				.setHeader(KafkaHeaders.MESSAGE_KEY, o.getId().toString())
+				.build();
 	}
 
 	public static PetShopOrder createPetShopOrder(OrderDto o) {

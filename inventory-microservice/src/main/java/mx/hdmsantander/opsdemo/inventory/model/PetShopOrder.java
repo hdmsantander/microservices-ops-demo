@@ -18,7 +18,7 @@ public class PetShopOrder {
 	@Id
 	private Integer orderId;
 
-	private Integer petId;
+	private String petId;
 
 	private Integer quantity;
 

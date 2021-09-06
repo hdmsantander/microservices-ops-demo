@@ -14,7 +14,7 @@ public class OrderEvent {
 
 	private Integer id;
 
-	private Integer petId;
+	private String petId;
 
 	private Integer quantity;
 
