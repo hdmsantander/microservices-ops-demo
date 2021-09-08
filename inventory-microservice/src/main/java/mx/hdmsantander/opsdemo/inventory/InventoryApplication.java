@@ -10,10 +10,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @ComponentScan(basePackages = "mx.hdmsantander.opsdemo.inventory")
 @EnableScheduling
 @SpringBootApplication
-public class QueryApplication {
+public class InventoryApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(QueryApplication.class, args);
+		SpringApplication.run(InventoryApplication.class, args);
 	}
 
 }
