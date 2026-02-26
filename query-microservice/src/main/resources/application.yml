@@ -38,13 +38,13 @@ spring:
           orderEventConsumer-in-0:
             consumer:
               configuration:
-                value.deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+                value.deserializer: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
                 spring.json.trusted.packages: "*"
                 spring.json.value.default.type: mx.hdmsantander.opsdemo.query.event.OrderEvent
           adoptionEventOut:
             producer:
               configuration:
-                value.serializer: org.springframework.kafka.support.serializer.JsonSerializer
+                value.serializer: org.springframework.kafka.support.serializer.JacksonJsonSerializer
 
 management:
   tracing:

@@ -13,7 +13,7 @@ import mx.hdmsantander.opsdemo.query.model.PetShopOrder;
 
 @Slf4j
 @Configuration
-public class OrderEventConsumer {
+public class OrderEventConsumerConfiguration {
 
 	@Autowired
 	PetShopOrderRepository petShopOrderRepository;
