@@ -1,7 +1,10 @@
 package mx.hdmsantander.opsdemo.query.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+
+import org.springframework.data.domain.Sort;
 
 import java.util.List;
 
@@ -35,7 +38,7 @@ class PetShopOrderServiceTest {
 	@Test
 	void getAllOrders_returnsOrdersFromRepository() {
 		PetShopOrder order = PetShopOrder.builder().orderId(1).petId("1").status("placed").build();
-		when(petShopOrderRepository.findAll()).thenReturn(List.of(order));
+		when(petShopOrderRepository.findAll(any(Sort.class))).thenReturn(List.of(order));
 
 		List<PetShopOrder> result = petShopOrderService.getAllOrders();
 
@@ -46,7 +49,7 @@ class PetShopOrderServiceTest {
 
 	@Test
 	void getAllOrders_whenEmpty_returnsEmptyList() {
-		when(petShopOrderRepository.findAll()).thenReturn(List.of());
+		when(petShopOrderRepository.findAll(any(Sort.class))).thenReturn(List.of());
 
 		List<PetShopOrder> result = petShopOrderService.getAllOrders();
 

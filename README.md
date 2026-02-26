@@ -7,17 +7,89 @@ This repository holds a Spring Boot OPS demo with the following components:
 - A Prometheus server that scrapes metrics from [Spring Boot Actuator](https://docs.spring.io/spring-boot/docs/current/reference/html/actuator.html).
 - A Kafka cluster for event-driven communication between the microservices and the tracer.
 
-The demo can be started by executing the following command:
+## Prerequisites
 
-```BASH
+- **Java 17** or higher
+- **Docker** and **Docker Compose** (for running the full stack)
+- **Maven 3.8+** (or use the included Maven wrapper `./mvnw`)
+
+## Quick Start
+
+### Start the full demo
+
+```bash
 ./start.sh
 ```
 
-The Zipkin server, Prometheus server and Kafka cluster can be started standalone by running:
+This script packages both microservices, builds Docker images, and starts the entire stack (Kafka, Zipkin, Prometheus, and both microservices).
 
-```BASH
+### Start infrastructure only (Kafka, Zipkin, Prometheus)
+
+```bash
 docker-compose -f docker-compose-minimal.yml up
 ```
+
+Then run the microservices locally:
+
+```bash
+# Terminal 1 - Inventory microservice (port 8079)
+cd inventory-microservice && ./mvnw spring-boot:run
+
+# Terminal 2 - Query microservice (port 8080)
+cd query-microservice && ./mvnw spring-boot:run
+```
+
+## Architecture & Event Flow
+
+```
+                    ┌─────────────────┐
+                    │  Pet Store API  │
+                    │ (petstore.swagger.io)
+                    └────────┬────────┘
+                             │
+         ┌───────────────────┼───────────────────┐
+         │                   │                   │
+         ▼                   ▼                   ▼
+┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
+│ Query Service   │  │ Inventory       │  │ Kafka           │
+│ (port 8080)     │◄─┤ Service        │─►│ (port 9092)     │
+│                 │  │ (port 8079)     │  │                 │
+│ • GET /v1/pet   │  │                 │  │ Topics:         │
+│ • POST adopt    │─►│ • order-events  │  │ • order-events-v1
+│ • GET /v1/orders│  │ • adoption-     │  │ • adoption-events-v1
+└────────┬────────┘  │   events        │  │ • adoption-      │
+         │           └─────────────────┘  │   congratulation│
+         │                                └─────────────────┘
+         ▼
+┌─────────────────┐  ┌─────────────────┐
+│ Zipkin (9411)   │  │ Prometheus      │
+│ (tracing)       │  │ (9090) (metrics) │
+└─────────────────┘  └─────────────────┘
+```
+
+### Kafka Topics
+
+| Topic | Producer | Consumer | Description |
+|------|----------|----------|-------------|
+| `order-events-v1` | Inventory | Query | Order updates from Pet Store API |
+| `adoption-events-v1` | Query | Inventory | Pet adoption events |
+| `adoption-congratulation-events-v1` | Inventory | (external) | Adoption confirmation events |
+
+## Running Tests
+
+```bash
+# Query microservice
+cd query-microservice && ./mvnw test
+
+# Inventory microservice
+cd inventory-microservice && ./mvnw test
+```
+
+## Important Configuration
+
+- **Kafka**: Both services expect Kafka at `localhost:9092`. Override with `spring.cloud.stream.kafka.binder.brokers` in `application.yml` or via environment variables.
+- **Spring Cloud 2025.1.0**: Required for Spring Boot 4.0.3 compatibility.
+- **Kafka JSON (Spring Kafka 4.x)**: Uses `JacksonJsonDeserializer` and `JacksonJsonSerializer`; configuration properties `spring.json.trusted.packages` and `spring.json.value.default.type` apply.
 
 ## Query microservice
 
@@ -30,7 +102,7 @@ This microservice performs queries to the inventory microservice and the pet sho
 - `POST /v1/pet/{id}/adopt` This operation performs the "adoption" of a pet from the shop. It requires a valid ID from the pet shop and it triggers an adoption event, which is consumed by the inventory microservice, which then in turn emits an event.
 - `GET /v1/orders` This operation queries the service's database to get a list of all the orders currently registered in the system. The orders are created from events wich the inventory microservice emits.
 
-The Swagger page is accesible at [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+The Swagger page is accessible at [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
 
 ## Inventory microservice
 
@@ -42,13 +114,13 @@ This microservice performs queries to the pet shop API. This service is used by 
 
 It also performs a scheduled query of the inventory of the pet shop API to "update" the inventory of the shop in the microservice ecosystem. The service performs a query of orders (generated randomly as integers in the range of 1-10) to the [orders endpoint](https://petstore.swagger.io/v2/store/order) of the pet shop API, triggering an event if the order exists, this event is consumed by the query microservice which in turn updates the entity in question in its database.
 
-The Swagger page is accesible at [http://localhost:8079/swagger-ui.html](http://localhost:8079/swagger-ui.html)
+The Swagger page is accessible at [http://localhost:8079/swagger-ui.html](http://localhost:8079/swagger-ui.html)
 
 ## Prometheus server
 
 ![Prometheus service](.img/3.png)
 
-The prometheus server is accesible at [http://localhost:9090](http://localhost:9090)
+The Prometheus server is accessible at [http://localhost:9090](http://localhost:9090)
 
 ### Example of metrics reported
 
@@ -80,23 +152,15 @@ In the [PetService.java](https://github.com/hdmsantander/microservices-ops-demo/
 
 #### Amount of orders in the system
 
-In the [PetShopOrderService.java](https://github.com/hdmsantander/microservices-ops-demo/blob/a2718edffddaceb66ad7045835c7b0705419c365/query-microservice/src/main/java/mx/hdmsantander/opsdemo/query/service/PetShopOrderService.java#L29) there is a _Gauge_ style metric that reports the size of the list containing all the orders currently in the query system's database.
+In [PetShopOrderService.java](query-microservice/src/main/java/mx/hdmsantander/opsdemo/query/service/PetShopOrderService.java) a _Gauge_ metric reports the number of orders in the query system's database:
 
-```JAVA
-private AtomicDouble orderCount = new AtomicDouble();
-
-	public List<PetShopOrder> getAllOrders() {
-
-		List<PetShopOrder> orders = StreamSupport.stream(petShopOrderRepository.findAll().spliterator(), false)
-				.collect(Collectors.toList());
-
-		orderCount.set(orders.size());
-
-		meterRegistry.gauge("orders.size", orderCount);
-
-		return orders;
-
-	}
+```java
+@PostConstruct
+void registerGauge() {
+    Gauge.builder("orders.size", petShopOrderRepository, r -> (double) r.count())
+            .description("Number of orders in the system")
+            .register(meterRegistry);
+}
 ```
 
 ![Orders updated](.img/10.png)
@@ -105,7 +169,7 @@ private AtomicDouble orderCount = new AtomicDouble();
 
 ![Zipkin server](.img/4.png)
 
-The Zipkin server is accesible at [http://localhost:9411](http://localhost:9411)
+The Zipkin server is accessible at [http://localhost:9411](http://localhost:9411)
 
 ### Example of traces registered
 
@@ -127,4 +191,4 @@ The query microservice performs a GET of the pet ID to the pet shop API, and if 
 
 ![Kafka server](.img/5.png)
 
-An interface to see the topcs and events found in the kafka server is accesible at [http://localhost:3030](http://localhost:3030)
+An interface to see the topics and events found in the Kafka server is accessible at [http://localhost:3030](http://localhost:3030)
