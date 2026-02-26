@@ -23,7 +23,7 @@ public class InventoryService {
 	private RestTemplate restTemplate;
 
 	@Timed(value = "inventory.query.time", description = "Time taken to get the inventory from the inventory service")
-	@Retryable(include = ResourceAccessException.class, maxAttempts = 3, backoff = @Backoff(delay = 500, multiplier = 2))
+	@Retryable(retryFor = ResourceAccessException.class, maxAttempts = 3, backoff = @Backoff(delay = 500, multiplier = 2))
 	public JsonNode getInventory() {
 
 		log.info("Retrieving inventory from the inventory microservice at: " + INVENTORY_SERVICE_URL);

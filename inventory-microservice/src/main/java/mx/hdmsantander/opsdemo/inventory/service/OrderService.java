@@ -34,7 +34,7 @@ public class OrderService {
 	private MeterRegistry meterRegistry;
 
 	@Timed(value = "orders.query.time", description = "Time taken to query the pet shop API to refresh orders")
-	@Retryable(include = ResourceAccessException.class, maxAttempts = 3, backoff = @Backoff(delay = 500, multiplier = 2))
+	@Retryable(retryFor = ResourceAccessException.class, maxAttempts = 3, backoff = @Backoff(delay = 500, multiplier = 2))
 	public void updateOrders() {
 
 		log.info("Updating orders using the pet shop API at: " + ORDER_SERVICE_BASE_URL);

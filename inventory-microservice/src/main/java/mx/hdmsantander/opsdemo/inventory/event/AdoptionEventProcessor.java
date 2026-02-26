@@ -1,26 +1,28 @@
 package mx.hdmsantander.opsdemo.inventory.event;
 
-import java.util.function.Function;
+import java.util.function.Consumer;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.Message;
-import org.springframework.stereotype.Component;
 
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-@Component("adoptionEventProcessor")
-@AllArgsConstructor
-public class AdoptionEventProcessor implements Function<AdoptionEvent, Message<AdoptionCongratulationEvent>>{
-	
-	@Override
-	public Message<AdoptionCongratulationEvent> apply(AdoptionEvent a) {
-		
-		log.info("Received an adoption event! Sending adoption congratulation event for " + a.getName());
-		return AdoptionCongratulationEvent.createFromAdoptionEvent(a);
-		
-	}
-	
-	
+@Configuration
+public class AdoptionEventProcessor {
 
+	@Autowired
+	StreamBridge streamBridge;
+
+	@Bean
+	public Consumer<Message<AdoptionEvent>> adoptionEventProcessor() {
+		return message -> {
+			AdoptionEvent adoptionEvent = message.getPayload();
+			log.info("Received an adoption event! Sending adoption congratulation event for {}", adoptionEvent.getName());
+			AdoptionCongratulationEvent congratulation = AdoptionCongratulationEvent.from(adoptionEvent);
+			streamBridge.send("adoptionCongratulationOut", congratulation);
+		};
+	}
 }

@@ -17,13 +17,14 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
     network_mode: host
   kafka:
-    image: landoop/fast-data-dev:cp3.3.0
+    image: apache/kafka:3.8.0
     container_name: kafka-demo
     environment:
-      ADV_HOST: localhost
-      RUNTESTS: 0
-      FORWARDLOGS: 0
-      SAMPLEDATA: 0
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: controller
     network_mode: host
   query-microservice:
     build:

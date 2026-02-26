@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>org.springframework.data</groupId>
+	<artifactId>spring-data-jpa-parent</artifactId>
+	<version>3.4.3</version>
+	<packaging>pom</packaging>
+
+	<name>Spring Data JPA Parent</name>
+	<description>Parent module for Spring Data JPA repositories.</description>
+	<url>https://spring.io/projects/spring-data-jpa</url>
+	<scm>
+		<connection>scm:git:git://github.com:spring-projects/spring-data-jpa.git</connection>
+		<developerConnection>scm:git:git@github.com:spring-projects/spring-data-jpa.git</developerConnection>
+		<url>https://github.com/spring-projects/spring-data-jpa</url>
+	</scm>
+	<issueManagement>
+		<url>https://github.com/spring-projects/spring-data-jpa/issues</url>
+	</issueManagement>
+
+	<parent>
+		<groupId>org.springframework.data.build</groupId>
+		<artifactId>spring-data-parent</artifactId>
+		<version>3.4.3</version>
+	</parent>
+
+	<properties>
+		<antlr>4.13.0</antlr> <!-- align with Hibernate's parser -->
+		<eclipselink>4.0.5</eclipselink>
+		<eclipselink-next>4.0.6-SNAPSHOT</eclipselink-next>
+		<hibernate>6.6.7.Final</hibernate>
+		<hibernate-62>6.2.32.Final</hibernate-62>
+		<hibernate-66-snapshots>6.6.8-SNAPSHOT</hibernate-66-snapshots>
+		<hibernate-70>7.0.0.Beta1</hibernate-70>
+		<hibernate-70-snapshots>7.0.0-SNAPSHOT</hibernate-70-snapshots>
+		<hsqldb>2.7.4</hsqldb>
+		<h2>2.3.232</h2>
+		<jakarta-persistence-api>3.1.0</jakarta-persistence-api>
+		<jsqlparser>5.0</jsqlparser>
+		<mysql-connector-java>9.1.0</mysql-connector-java>
+		<postgresql>42.7.4</postgresql>
+		<springdata.commons>3.4.3</springdata.commons>
+		<vavr>0.10.3</vavr>
+
+		<hibernate.groupId>org.hibernate</hibernate.groupId>
+
+		<sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
+
+	</properties>
+
+	<modules>
+		<module>spring-data-envers</module>
+		<module>spring-data-jpa</module>
+		<module>spring-data-jpa-distribution</module>
+	</modules>
+
+
+	<profiles>
+		<profile>
+			<id>hibernate-62</id>
+			<properties>
+				<hibernate>${hibernate-62}</hibernate>
+			</properties>
+		</profile>
+		<profile>
+			<id>hibernate-66-snapshots</id>
+			<properties>
+				<hibernate>${hibernate-66-snapshots}</hibernate>
+			</properties>
+			<repositories>
+				<repository>
+					<id>sonatype-oss</id>
+					<url>https://oss.sonatype.org/content/repositories/snapshots</url>
+					<releases>
+						<enabled>false</enabled>
+					</releases>
+				</repository>
+			</repositories>
+		</profile>
+		<profile>
+			<id>hibernate-70</id>
+			<properties>
+				<hibernate>${hibernate-70}</hibernate>
+				<jakarta-persistence-api>3.2.0-M2</jakarta-persistence-api>
+			</properties>
+			<repositories>
+				<repository>
+					<id>sonatype-oss</id>
+					<url>https://oss.sonatype.org/content/repositories/snapshots</url>
+					<releases>
+						<enabled>false</enabled>
+					</releases>
+				</repository>
+			</repositories>
+		</profile>
+		<profile>
+			<id>hibernate-70-snapshots</id>
+			<properties>
+				<hibernate>${hibernate-70-snapshots}</hibernate>
+				<jakarta-persistence-api>3.2.0-M2</jakarta-persistence-api>
+			</properties>
+			<repositories>
+				<repository>
+					<id>sonatype-oss</id>
+					<url>https://oss.sonatype.org/content/repositories/snapshots</url>
+					<releases>
+						<enabled>false</enabled>
+					</releases>
+				</repository>
+			</repositories>
+		</profile>
+		<profile>
+			<id>eclipselink-next</id>
+			<properties>
+				<eclipselink>${eclipselink-next}</eclipselink>
+			</properties>
+			<repositories>
+				<repository>
+					<id>jakarta.oss.sonatype.org</id>
+					<name>Jakarta OSS Sonatype Staging</name>
+					<url>https://jakarta.oss.sonatype.org/content/repositories/staging</url>
+					<releases>
+						<enabled>false</enabled>
+					</releases>
+				</repository>
+			</repositories>
+		</profile>
+	</profiles>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.testcontainers</groupId>
+				<artifactId>testcontainers-bom</artifactId>
+				<version>${testcontainers}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-instrument</artifactId>
+			<version>${spring}</version>
+			<scope>provided</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>com.gradle</groupId>
+					<artifactId>develocity-maven-extension</artifactId>
+					<configuration>
+						<develocity>
+							<normalization>
+								<runtimeClassPath>
+									<ignoredFiles>
+										<ignoredFile>builddef.lst</ignoredFile>
+									</ignoredFiles>
+								</runtimeClassPath>
+							</normalization>
+						</develocity>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+	</build>
+
+	<repositories>
+		
+		
+	</repositories>
+
+	<pluginRepositories>
+		<pluginRepository>
+			<id>spring-milestone</id>
+			<url>https://repo.spring.io/milestone</url>
+		</pluginRepository>
+	</pluginRepositories>
+
+</project>

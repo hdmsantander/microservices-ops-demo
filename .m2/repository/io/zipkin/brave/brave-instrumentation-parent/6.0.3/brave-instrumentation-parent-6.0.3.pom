@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+
+    Copyright The OpenZipkin Authors
+    SPDX-License-Identifier: Apache-2.0
+
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.zipkin.brave</groupId>
+    <artifactId>brave-parent</artifactId>
+    <version>6.0.3</version>
+  </parent>
+
+  <artifactId>brave-instrumentation-parent</artifactId>
+  <name>Brave: Instrumentation</name>
+  <packaging>pom</packaging>
+
+  <properties>
+    <main.basedir>${project.basedir}/..</main.basedir>
+  </properties>
+
+  <modules>
+    <module>http</module>
+    <module>http-tests</module>
+    <module>http-tests-jakarta</module>
+    <module>dubbo</module>
+    <module>grpc</module>
+    <module>httpasyncclient</module>
+    <module>httpclient</module>
+    <module>httpclient5</module>
+    <module>jaxrs2</module>
+    <module>jersey-server</module>
+    <module>jms</module>
+    <module>jms-jakarta</module>
+    <module>jakarta-jms</module>
+    <module>messaging</module>
+    <module>mongodb</module>
+    <module>mysql</module>
+    <module>mysql6</module>
+    <module>mysql8</module>
+    <module>okhttp3</module>
+    <module>rpc</module>
+    <module>servlet</module>
+    <module>servlet-jakarta</module>
+    <module>spring-rabbit</module>
+    <module>spring-web</module>
+    <module>spring-webmvc</module>
+    <module>kafka-clients</module>
+    <module>kafka-streams</module>
+    <module>netty-codec-http</module>
+    <module>vertx-web</module>
+  </modules>
+
+  <!-- ${project.groupId}:brave version is set in the root pom.
+  here we set all shared versions for instrumentation -->
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>brave-instrumentation-http</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>brave-instrumentation-http-tests</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>${project.groupId}</groupId>
+        <artifactId>brave-instrumentation-servlet</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>brave</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+  </dependencies>
+</project>

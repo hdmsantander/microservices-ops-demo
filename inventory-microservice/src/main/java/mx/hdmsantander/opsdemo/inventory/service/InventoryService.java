@@ -27,7 +27,7 @@ public class InventoryService {
 	private OrderService orderService;
 	
 	@Timed(value = "inventory.query.time", description = "Time taken to get the inventory from the pet shop API")
-	@Retryable(include = ResourceAccessException.class, maxAttempts = 3, backoff = @Backoff(delay = 500, multiplier = 2))
+	@Retryable(retryFor = ResourceAccessException.class, maxAttempts = 3, backoff = @Backoff(delay = 500, multiplier = 2))
 	public JsonNode getInventory() {
 
 		log.info("Retrieving inventory from the inventory service of the pet shop at: " + INVENTORY_SERVICE_URL);

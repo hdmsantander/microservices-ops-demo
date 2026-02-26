@@ -2,10 +2,10 @@
 
 This repository holds a Spring Boot OPS demo with the following components:
 
-- Two microservices that perform requests to the [Swagger's PetStore](https://petstore.swagger.io/) and comunicate with each other using HTTP requests and events using [Spring Cloud Stream](https://spring.io/projects/spring-cloud-stream).
-- A ZipKin server that register traces and dependencies from the microservices operations, provided by [Spring Cloud Sleuth](https://spring.io/projects/spring-cloud-sleuth).
-- A Prometheus server that polls the microservices to register metrics gathered from [Spring Boot's actuator](https://docs.spring.io/spring-boot/docs/current/reference/html/actuator.html).
-- A Kafka cluster to comunicate the microservices and the tracer.
+- Two microservices (Spring Boot 4.0.3) that perform requests to the [Swagger's PetStore](https://petstore.swagger.io/) and communicate with each other using HTTP and [Spring for Apache Kafka](https://spring.io/projects/spring-kafka).
+- A Zipkin server that receives traces from the microservices via [Micrometer Tracing](https://micrometer.io/docs/tracing) (Brave).
+- A Prometheus server that scrapes metrics from [Spring Boot Actuator](https://docs.spring.io/spring-boot/docs/current/reference/html/actuator.html).
+- A Kafka cluster for event-driven communication between the microservices and the tracer.
 
 The demo can be started by executing the following command:
 

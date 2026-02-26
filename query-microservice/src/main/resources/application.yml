@@ -4,63 +4,54 @@ server:
 spring:
   application:
     name: query-microservice
-
   profiles:
     active: development
 
   datasource:
     url: jdbc:h2:mem:testdb
     driver-class-name: org.h2.Driver
+    username: sa
+    password: password
 
   jpa:
     hibernate:
       ddl-auto: update
     generate-ddl: true
-    show-sql: false
-
-  h2:
-    console:
-      enabled: true
-
-  zipkin:
-    kafka:
-      topic: zipkin
-    sender:
-      type: kafka
-
-  sleuth:
-    sampler:
-      rate: 10
+    show-sql: true
+    database-platform: org.hibernate.dialect.H2Dialect
 
   cloud:
     function:
       definition: orderEventConsumer
-
     stream:
-      default-binder: kafka
       bindings:
         orderEventConsumer-in-0:
           destination: order-events-v1
           group: query-service
-        adoptionEventSupplier-out-0:
+        adoptionEventOut:
           destination: adoption-events-v1
-
       kafka:
         binder:
           brokers: localhost:9092
           replication-factor: 1
-          auto-create-topics: true
-
-      source: adoptionEventSupplier
-
-  kafka:
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-    consumer:
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+        bindings:
+          orderEventConsumer-in-0:
+            consumer:
+              configuration:
+                value.deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+                spring.json.trusted.packages: "*"
+                spring.json.value.default.type: mx.hdmsantander.opsdemo.query.event.OrderEvent
+          adoptionEventOut:
+            producer:
+              configuration:
+                value.serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 management:
+  tracing:
+    export:
+      enabled: true
+      zipkin:
+        endpoint: http://localhost:9411/api/v2/spans
   endpoints:
     web:
       exposure:
