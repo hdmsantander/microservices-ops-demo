@@ -12,6 +12,7 @@ import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRe
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
@@ -27,11 +28,13 @@ import mx.hdmsantander.opsdemo.inventory.service.InventoryService;
  * X-Zipkin-Trace-Id header is present in responses, confirming trace
  * propagation through the request/response cycle.
  * Uses HTTP transport for Zipkin (no Kafka client) and SAME_THREAD execution.
+ * Uses embedded Kafka for Spring Cloud Stream (no external Kafka required).
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestRestTemplate
 @ActiveProfiles("test")
 @Execution(ExecutionMode.SAME_THREAD)
+@EmbeddedKafka(bootstrapServersProperty = "spring.cloud.stream.kafka.binder.brokers")
 class TracingPropagationTest {
 
 	@Autowired
