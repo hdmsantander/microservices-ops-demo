@@ -26,8 +26,10 @@ This script packages both microservices, builds Docker images, and starts the en
 ### Start infrastructure only (Kafka, Zipkin, Prometheus)
 
 ```bash
-docker-compose -f docker-compose-minimal.yml up
+./start.sh minimal
 ```
+
+Or directly: `docker compose -f docker-compose-minimal.yml up`
 
 Then run the microservices locally:
 

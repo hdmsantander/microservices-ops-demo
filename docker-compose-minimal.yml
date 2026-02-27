@@ -1,11 +1,24 @@
 version: '3.9'
 services:
+  kafka:
+    image: apache/kafka:4.0.1
+    container_name: kafka-demo
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: controller
+    network_mode: host
   zipkin:
     image: openzipkin/zipkin
     container_name: zipkin-demo
     environment:
       KAFKA_BOOTSTRAP_SERVERS: localhost:9092
     network_mode: host
+    depends_on:
+      - kafka
   prometheus:
     image: prom/prometheus
     container_name: prometheus-demo

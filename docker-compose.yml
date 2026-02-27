@@ -16,7 +16,7 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
     network_mode: host
   kafka:
-    image: apache/kafka:3.8.0
+    image: apache/kafka:4.0.1
     container_name: kafka-demo
     environment:
       KAFKA_NODE_ID: 1
