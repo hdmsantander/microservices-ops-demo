@@ -29,18 +29,17 @@ public class InventoryService {
 	@Timed(value = "inventory.query.time", description = "Time taken to get the inventory from the pet shop API")
 	@Retryable(retryFor = ResourceAccessException.class, maxAttempts = 3, backoff = @Backoff(delay = 500, multiplier = 2))
 	public JsonNode getInventory() {
-
 		log.info("Retrieving inventory from the inventory service of the pet shop at: " + INVENTORY_SERVICE_URL);
-
-		ResponseEntity<JsonNode> responseEntity = restTemplate.getForEntity(INVENTORY_SERVICE_URL, JsonNode.class);
-
-		log.info("The request got back the status: " + responseEntity.getStatusCode());
-
-		JsonNode inventory = responseEntity.getBody();
-
-		log.info("Request was successful! Returning inventory");
-
-		return inventory != null ? inventory : com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+		try {
+			ResponseEntity<JsonNode> responseEntity = restTemplate.getForEntity(INVENTORY_SERVICE_URL, JsonNode.class);
+			log.info("The request got back the status: " + responseEntity.getStatusCode());
+			JsonNode inventory = responseEntity.getBody();
+			log.info("Request was successful! Returning inventory");
+			return inventory != null ? inventory : com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+		} catch (Exception e) {
+			log.warn("Failed to retrieve inventory from petstore API: {}", e.getMessage());
+			return com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
+		}
 	}
 
 	@Scheduled(fixedDelay = 20000)

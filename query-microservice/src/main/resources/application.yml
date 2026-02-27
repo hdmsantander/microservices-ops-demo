@@ -44,6 +44,10 @@ spring:
 
 management:
   tracing:
+    sampling:
+      probability: 1.0
+    propagation:
+      type: b3
     export:
       enabled: true
       zipkin:

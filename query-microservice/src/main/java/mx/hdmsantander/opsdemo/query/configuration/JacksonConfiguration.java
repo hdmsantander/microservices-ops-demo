@@ -1,4 +1,4 @@
-package mx.hdmsantander.opsdemo.inventory.configuration;
+package mx.hdmsantander.opsdemo.query.configuration;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -22,7 +22,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * Configures Jackson ObjectMapper and RestTemplate for JSON handling.
  * Uses RestTemplateBuilder for automatic trace context propagation (B3 headers).
  * Provides JsonNodeHttpMessageConverter for deserializing JSON to JsonNode.
- * Keeps MappingJackson2HttpMessageConverter for other JSON types.
+ * Keeps MappingJackson2HttpMessageConverter for Pet and other POJO types.
  */
 @Configuration
 public class JacksonConfiguration {
@@ -42,7 +42,6 @@ public class JacksonConfiguration {
 
 	/**
 	 * HttpMessageConverter that deserializes JSON to JsonNode using ObjectMapper.readTree().
-	 * JsonNode is abstract; Jackson cannot deserialize directly into it without this converter.
 	 */
 	private static final class JsonNodeHttpMessageConverter implements HttpMessageConverter<JsonNode> {
 
