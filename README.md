@@ -41,31 +41,49 @@ cd query-microservice && ./mvnw spring-boot:run
 
 ## Architecture & Event Flow
 
+```mermaid
+flowchart TB
+    subgraph External["External Services"]
+        PetStore["Pet Store API<br/>(petstore.swagger.io)"]
+    end
+
+    subgraph Microservices["Microservices"]
+        Query["Query Service<br/>:8080<br/>• GET /v1/pet<br/>• POST /v1/pet/:id/adopt<br/>• GET /v1/orders<br/>• GET /v1/inventory"]
+        Inventory["Inventory Service<br/>:8079<br/>• GET /v1/inventory<br/>• Scheduled order sync"]
+    end
+
+    subgraph Kafka["Apache Kafka :9092"]
+        direction TB
+        OE["order-events-v1"]
+        AE["adoption-events-v1"]
+        ACE["adoption-congratulation-events-v1"]
+        ZipkinTopic["zipkin (traces)"]
+    end
+
+    subgraph Observability["Observability"]
+        Zipkin["Zipkin<br/>:9411<br/>Tracing"]
+        Prometheus["Prometheus<br/>:9090<br/>Metrics"]
+    end
+
+    PetStore <-->|HTTP| Query
+    PetStore <-->|HTTP| Inventory
+    Query <-->|HTTP| Inventory
+
+    Inventory -->|produce| OE
+    OE -->|consume| Query
+    Query -->|produce| AE
+    AE -->|consume| Inventory
+    Inventory -->|produce| ACE
+
+    Query -->|traces| ZipkinTopic
+    Inventory -->|traces| ZipkinTopic
+    ZipkinTopic -->|consume| Zipkin
+
+    Prometheus -->|scrape /actuator/prometheus| Query
+    Prometheus -->|scrape /actuator/prometheus| Inventory
 ```
-                    ┌─────────────────┐
-                    │  Pet Store API  │
-                    │ (petstore.swagger.io)
-                    └────────┬────────┘
-                             │
-         ┌───────────────────┼───────────────────┐
-         │                   │                   │
-         ▼                   ▼                   ▼
-┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
-│ Query Service   │  │ Inventory       │  │ Kafka           │
-│ (port 8080)     │◄─┤ Service        │─►│ (port 9092)     │
-│                 │  │ (port 8079)     │  │                 │
-│ • GET /v1/pet   │  │                 │  │ Topics:         │
-│ • POST adopt    │─►│ • order-events  │  │ • order-events-v1
-│ • GET /v1/orders│  │ • adoption-     │  │ • adoption-events-v1
-└────────┬────────┘  │   events        │  │ • adoption-      │
-         │           └─────────────────┘  │   congratulation│
-         │                                └─────────────────┘
-         ▼
-┌─────────────────┐  ┌─────────────────┐
-│ Zipkin (9411)   │  │ Prometheus      │
-│ (tracing)       │  │ (9090) (metrics) │
-└─────────────────┘  └─────────────────┘
-```
+
+> **Note:** Zipkin is configured with `KAFKA_BOOTSTRAP_SERVERS` in docker-compose and can consume traces from the `zipkin` Kafka topic. Microservices may send traces via HTTP (default) or Kafka depending on configuration.
 
 ### Kafka Topics
 
@@ -74,6 +92,7 @@ cd query-microservice && ./mvnw spring-boot:run
 | `order-events-v1` | Inventory | Query | Order updates from Pet Store API |
 | `adoption-events-v1` | Query | Inventory | Pet adoption events |
 | `adoption-congratulation-events-v1` | Inventory | (external) | Adoption confirmation events |
+| `zipkin` | Query, Inventory | Zipkin | Distributed traces (when Kafka transport is enabled) |
 
 ## Running Tests
 
