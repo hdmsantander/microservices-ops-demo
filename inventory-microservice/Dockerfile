@@ -11,6 +11,9 @@ COPY ${JAR_FILE} application.jar
 # Use jarmode=tools (replaces deprecated layertools) to extract layered jar
 RUN java -Djarmode=tools -jar application.jar extract --layers --destination extracted
 
+# Rename application jar to fixed name for portable ENTRYPOINT
+RUN cp extracted/application/*.jar extracted/application/application.jar
+
 # =============================================================================
 # Runtime stage: Minimal production image
 # =============================================================================
@@ -40,8 +43,8 @@ ENV JAVA_TOOL_OPTIONS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:In
 
 ENV SPRING_PROFILES_ACTIVE=development
 
-# Use JarLauncher with extracted layout (AOT cache and CDS friendly)
-ENTRYPOINT ["java", "org.springframework.boot.loader.JarLauncher"]
+# Run the thin application jar (references extracted layers from classpath)
+ENTRYPOINT ["java", "-jar", "application.jar"]
 
 # Health check via Spring Boot Actuator (inventory service runs on 8079)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
