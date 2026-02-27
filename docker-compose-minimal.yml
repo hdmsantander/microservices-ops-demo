@@ -10,6 +10,8 @@ services:
   zipkin:
     image: openzipkin/zipkin
     container_name: zipkin-demo
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: localhost:9092
     network_mode: host
     depends_on:
       - kafka

@@ -59,6 +59,7 @@ flowchart TB
         OE["order-events-v1"]
         AE["adoption-events-v1"]
         ACE["adoption-congratulation-events-v1"]
+        ZipkinTopic["zipkin (traces)"]
     end
 
     subgraph Observability["Observability"]
@@ -76,14 +77,15 @@ flowchart TB
     AE -->|consume| Inventory
     Inventory -->|produce| ACE
 
-    Query -->|traces HTTP| Zipkin
-    Inventory -->|traces HTTP| Zipkin
+    Query -->|traces| ZipkinTopic
+    Inventory -->|traces| ZipkinTopic
+    ZipkinTopic -->|consume| Zipkin
 
     Prometheus -->|scrape /actuator/prometheus| Query
     Prometheus -->|scrape /actuator/prometheus| Inventory
 ```
 
-> **Note:** Microservices send traces to Zipkin via HTTP (`management.tracing.export.zipkin.endpoint`).
+> **Note:** Microservices send traces to Zipkin via Kafka (`zipkin` topic). Zipkin consumes from Kafka. Configure `management.tracing.export.zipkin.kafka.bootstrap-servers`.
 
 ### Kafka Topics
 
@@ -92,6 +94,7 @@ flowchart TB
 | `order-events-v1`                   | Inventory        | Query      | Order updates from Pet Store API |
 | `adoption-events-v1`                | Query            | Inventory  | Pet adoption events              |
 | `adoption-congratulation-events-v1` | Inventory        | (external) | Adoption confirmation events     |
+| `zipkin`                            | Query, Inventory | Zipkin     | Distributed traces               |
 
 ## Running Tests
 
@@ -106,7 +109,7 @@ cd inventory-microservice && ./mvnw test
 ## Important Configuration
 
 - **Kafka**: Uses `landoop/fast-data-dev` (Kafka + Zookeeper + Schema Registry + Web UI). Broker at `localhost:9092`, Web UI at [http://localhost:3030](http://localhost:3030). Override broker with `spring.cloud.stream.kafka.binder.brokers` or `SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS`.
-- **Tracing**: Traces are sent to Zipkin via HTTP. Configure `management.tracing.export.zipkin.endpoint` (default: `http://localhost:9411/api/v2/spans`).
+- **Tracing**: Traces are sent to Zipkin via Kafka using Micrometer Tracing and zipkin-sender-kafka. Configure `management.tracing.export.zipkin.kafka.bootstrap-servers` (default: `localhost:9092`), topic: `zipkin`.
 - **Spring Cloud 2025.1.0**: Required for Spring Boot 4.0.3 compatibility.
 - **Kafka JSON (Spring Kafka 4.x)**: Uses `JacksonJsonDeserializer` and `JacksonJsonSerializer`. Configure via binder-level `consumer-properties` and `producer-properties` (not bindings-level). Use bracket notation for dotted keys, e.g. `"[value.deserializer]"`, `"[spring.json.trusted.packages]"`, `"[spring.json.value.default.type]"`.
 

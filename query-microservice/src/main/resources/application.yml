@@ -47,7 +47,9 @@ management:
     export:
       enabled: true
       zipkin:
-        endpoint: http://localhost:9411/api/v2/spans
+        kafka:
+          bootstrap-servers: localhost:9092
+          topic: zipkin
   endpoints:
     web:
       exposure:
