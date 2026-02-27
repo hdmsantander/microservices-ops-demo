@@ -109,7 +109,7 @@ cd inventory-microservice && ./mvnw test
 ## Important Configuration
 
 - **Kafka**: Uses `landoop/fast-data-dev` (Kafka + Zookeeper + Schema Registry + Web UI). Broker at `localhost:9092`, Web UI at [http://localhost:3030](http://localhost:3030). Override broker with `spring.cloud.stream.kafka.binder.brokers` or `SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS`.
-- **Tracing**: Traces are sent to Zipkin via Kafka using Micrometer Tracing and zipkin-sender-kafka. Configure `management.tracing.export.zipkin.kafka.bootstrap-servers` (default: `localhost:9092`), topic: `zipkin`.
+- **Tracing**: Traces are sent to Zipkin via Kafka by default. Set `management.tracing.export.zipkin.transport: kafka` (default) or `http`. For Kafka: `kafka.bootstrap-servers` (default: `localhost:9092`), `kafka.topic` (default: `zipkin`). For HTTP: set `transport: http` and `endpoint: http://localhost:9411/api/v2/spans`.
 - **Spring Cloud 2025.1.0**: Required for Spring Boot 4.0.3 compatibility.
 - **Kafka JSON (Spring Kafka 4.x)**: Uses `JacksonJsonDeserializer` and `JacksonJsonSerializer`. Configure via binder-level `consumer-properties` and `producer-properties` (not bindings-level). Use bracket notation for dotted keys, e.g. `"[value.deserializer]"`, `"[spring.json.trusted.packages]"`, `"[spring.json.value.default.type]"`.
 

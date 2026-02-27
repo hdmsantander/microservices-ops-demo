@@ -18,11 +18,11 @@ import zipkin2.reporter.kafka.KafkaSender;
 
 /**
  * Configures Zipkin to send spans via Kafka using Micrometer Tracing's async
- * handler chain. Uses Spring Cloud Stream Kafka binder broker config when
- * management.tracing.export.zipkin.kafka.bootstrap-servers is set.
+ * handler chain. Kafka is the default transport. Set
+ * management.tracing.export.zipkin.transport=http to use HTTP instead.
  */
 @Configuration
-@ConditionalOnProperty(name = "management.tracing.export.zipkin.kafka.bootstrap-servers")
+@ConditionalOnProperty(prefix = "management.tracing.export.zipkin", name = "transport", havingValue = "kafka", matchIfMissing = true)
 @AutoConfigureBefore(ZipkinAutoConfiguration.class)
 class ZipkinKafkaConfiguration {
 

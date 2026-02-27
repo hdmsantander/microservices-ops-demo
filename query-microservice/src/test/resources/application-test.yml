@@ -3,4 +3,5 @@ management:
   tracing:
     export:
       zipkin:
+        transport: http
         endpoint: http://localhost:9411/api/v2/spans
