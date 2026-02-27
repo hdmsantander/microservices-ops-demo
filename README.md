@@ -37,7 +37,7 @@ Then run the microservices locally:
 # Terminal 1 - Inventory microservice (port 8081)
 cd inventory-microservice && ./mvnw spring-boot:run
 
-# Terminal 2 - Query microservice (port 8080)
+# Terminal 2 - Query microservice (port 8082)
 cd query-microservice && ./mvnw spring-boot:run
 ```
 
@@ -50,7 +50,7 @@ flowchart TB
     end
 
     subgraph Microservices["Microservices"]
-        Query["Query Service<br/>:8080<br/>• GET /v1/pet<br/>• POST /v1/pet/:id/adopt<br/>• GET /v1/orders<br/>• GET /v1/inventory"]
+        Query["Query Service<br/>:8082<br/>• GET /v1/pet<br/>• POST /v1/pet/:id/adopt<br/>• GET /v1/orders<br/>• GET /v1/inventory"]
         Inventory["Inventory Service<br/>:8081<br/>• GET /v1/inventory<br/>• Scheduled order sync"]
     end
 
@@ -124,7 +124,7 @@ This microservice performs queries to the inventory microservice and the pet sho
 - `POST /v1/pet/{id}/adopt` This operation performs the "adoption" of a pet from the shop. It requires a valid ID from the pet shop and it triggers an adoption event, which is consumed by the inventory microservice, which then in turn emits an event.
 - `GET /v1/orders` This operation queries the service's database to get a list of all the orders currently registered in the system. The orders are created from events wich the inventory microservice emits.
 
-The Swagger page is accessible at [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+The Swagger page is accessible at [http://localhost:8082/swagger-ui.html](http://localhost:8082/swagger-ui.html)
 
 ## Inventory microservice
 
