@@ -53,8 +53,8 @@ class TracingPropagationTest {
 
 	@Test
 	void trace_context_is_propagated_in_http_response() {
-		JsonNode emptyInventory = new ObjectMapper().createObjectNode();
-		when(inventoryService.getInventory()).thenReturn(emptyInventory);
+		JsonNode inventory = new ObjectMapper().createObjectNode().put("available", 0).put("pending", 0).put("sold", 0);
+		when(inventoryService.getInventory()).thenReturn(inventory);
 
 		ResponseEntity<String> response = restTemplate.getForEntity("/v1/inventory", String.class);
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -70,11 +70,19 @@ class TracingPropagationTest {
 
 	@Test
 	void tracer_creates_span_context_when_active() {
-		JsonNode emptyInventory = new ObjectMapper().createObjectNode();
-		when(inventoryService.getInventory()).thenReturn(emptyInventory);
+		JsonNode inventory = new ObjectMapper().createObjectNode().put("available", 0);
+		when(inventoryService.getInventory()).thenReturn(inventory);
 
 		ResponseEntity<String> response = restTemplate.getForEntity("/v1/inventory", String.class);
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 		assertThat(response.getHeaders().getFirst("X-Zipkin-Trace-Id")).isNotNull();
+	}
+
+	@Test
+	void empty_inventory_maps_to_server_error() {
+		when(inventoryService.getInventory()).thenReturn(new ObjectMapper().createObjectNode());
+
+		ResponseEntity<String> response = restTemplate.getForEntity("/v1/inventory", String.class);
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
 	}
 }
