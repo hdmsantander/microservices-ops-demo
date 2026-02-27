@@ -83,16 +83,16 @@ flowchart TB
     Prometheus -->|scrape /actuator/prometheus| Inventory
 ```
 
-> **Note:** Zipkin is configured with `KAFKA_BOOTSTRAP_SERVERS` in docker-compose and can consume traces from the `zipkin` Kafka topic. Microservices may send traces via HTTP (default) or Kafka depending on configuration.
+> **Note:** Zipkin is configured with `KAFKA_BOOTSTRAP_SERVERS` in docker-compose and can consume traces from the `zipkin` Kafka topic. Microservices send traces via Kafka.
 
 ### Kafka Topics
 
-| Topic | Producer | Consumer | Description |
-|------|----------|----------|-------------|
-| `order-events-v1` | Inventory | Query | Order updates from Pet Store API |
-| `adoption-events-v1` | Query | Inventory | Pet adoption events |
-| `adoption-congratulation-events-v1` | Inventory | (external) | Adoption confirmation events |
-| `zipkin` | Query, Inventory | Zipkin | Distributed traces (when Kafka transport is enabled) |
+| Topic                               | Producer         | Consumer   | Description                      |
+| ----------------------------------- | ---------------- | ---------- | -------------------------------- |
+| `order-events-v1`                   | Inventory        | Query      | Order updates from Pet Store API |
+| `adoption-events-v1`                | Query            | Inventory  | Pet adoption events              |
+| `adoption-congratulation-events-v1` | Inventory        | (external) | Adoption confirmation events     |
+| `zipkin`                            | Query, Inventory | Zipkin     | Distributed traces               |
 
 ## Running Tests
 
