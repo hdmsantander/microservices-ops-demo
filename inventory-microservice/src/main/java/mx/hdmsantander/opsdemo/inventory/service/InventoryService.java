@@ -10,7 +10,6 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.micrometer.core.annotation.Timed;
 import lombok.extern.slf4j.Slf4j;
@@ -20,8 +19,6 @@ import lombok.extern.slf4j.Slf4j;
 public class InventoryService {
 
 	private static final String INVENTORY_SERVICE_URL = "https://petstore.swagger.io/v2/store/inventory";
-
-	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
 	@Autowired
 	private RestTemplate restTemplate;
@@ -35,25 +32,15 @@ public class InventoryService {
 
 		log.info("Retrieving inventory from the inventory service of the pet shop at: " + INVENTORY_SERVICE_URL);
 
-		ResponseEntity<String> responseEntity = restTemplate.getForEntity(INVENTORY_SERVICE_URL, String.class);
+		ResponseEntity<JsonNode> responseEntity = restTemplate.getForEntity(INVENTORY_SERVICE_URL, JsonNode.class);
 
 		log.info("The request got back the status: " + responseEntity.getStatusCode());
 
-		JsonNode inventory = parseJson(responseEntity.getBody());
+		JsonNode inventory = responseEntity.getBody();
 
 		log.info("Request was successful! Returning inventory");
 
-		return inventory;
-
-	}
-
-	private JsonNode parseJson(String body) {
-		try {
-			return body != null ? OBJECT_MAPPER.readTree(body) : OBJECT_MAPPER.createObjectNode();
-		} catch (Exception e) {
-			log.warn("Failed to parse inventory response, returning empty object: {}", e.getMessage());
-			return OBJECT_MAPPER.createObjectNode();
-		}
+		return inventory != null ? inventory : com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
 	}
 
 	@Scheduled(fixedDelay = 20000)
