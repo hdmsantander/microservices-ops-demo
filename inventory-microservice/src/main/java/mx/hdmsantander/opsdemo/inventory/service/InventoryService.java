@@ -10,6 +10,7 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.micrometer.core.annotation.Timed;
 import lombok.extern.slf4j.Slf4j;
@@ -24,24 +25,36 @@ public class InventoryService {
 	private RestTemplate restTemplate;
 
 	@Autowired
+	private ObjectMapper objectMapper;
+
+	@Autowired
 	private OrderService orderService;
-	
+
 	@Timed(value = "inventory.query.time", description = "Time taken to get the inventory from the pet shop API")
 	@Retryable(retryFor = ResourceAccessException.class, maxAttempts = 3, backoff = @Backoff(delay = 500, multiplier = 2))
 	public JsonNode getInventory() {
 
 		log.info("Retrieving inventory from the inventory service of the pet shop at: " + INVENTORY_SERVICE_URL);
 
-		ResponseEntity<JsonNode> responseEntity = restTemplate.getForEntity(INVENTORY_SERVICE_URL, JsonNode.class);
+		ResponseEntity<String> responseEntity = restTemplate.getForEntity(INVENTORY_SERVICE_URL, String.class);
 
 		log.info("The request got back the status: " + responseEntity.getStatusCode());
 
-		JsonNode inventory = responseEntity.getBody();
+		JsonNode inventory = parseJson(responseEntity.getBody());
 
 		log.info("Request was successful! Returning inventory");
 
 		return inventory;
 
+	}
+
+	private JsonNode parseJson(String body) {
+		try {
+			return body != null ? objectMapper.readTree(body) : objectMapper.createObjectNode();
+		} catch (Exception e) {
+			log.warn("Failed to parse inventory response, returning empty object: {}", e.getMessage());
+			return objectMapper.createObjectNode();
+		}
 	}
 
 	@Scheduled(fixedDelay = 20000)
