@@ -26,7 +26,7 @@ import mx.hdmsantander.opsdemo.inventory.service.InventoryService;
 public class MainController {
 
 	@Autowired
-	InventoryService inventoryService;
+	private InventoryService inventoryService;
 
 	@Operation(summary = "Check inventory", description = "Retrieves inventory from the pet shop API at https://petstore.swagger.io/v2/store/inventory")
 	@ApiResponses(value = {

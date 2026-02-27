@@ -16,7 +16,7 @@ import mx.hdmsantander.opsdemo.query.model.PetShopOrder;
 public class OrderEventConsumerConfiguration {
 
 	@Autowired
-	PetShopOrderRepository petShopOrderRepository;
+	private PetShopOrderRepository petShopOrderRepository;
 
 	@Bean
 	public Consumer<Message<OrderEvent>> orderEventConsumer() {

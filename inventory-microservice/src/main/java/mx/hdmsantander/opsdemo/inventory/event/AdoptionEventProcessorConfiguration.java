@@ -15,7 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 public class AdoptionEventProcessorConfiguration {
 
 	@Autowired
-	StreamBridge streamBridge;
+	private StreamBridge streamBridge;
 
 	@Bean
 	public Consumer<Message<AdoptionEvent>> adoptionEventProcessor() {

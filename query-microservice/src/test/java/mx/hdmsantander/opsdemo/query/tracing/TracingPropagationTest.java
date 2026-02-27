@@ -25,10 +25,10 @@ import io.micrometer.tracing.Tracer;
 class TracingPropagationTest {
 
 	@Autowired
-	Tracer tracer;
+	private Tracer tracer;
 
 	@Autowired
-	TestRestTemplate restTemplate;
+	private TestRestTemplate restTemplate;
 
 	@Test
 	void tracer_is_present_in_context() {

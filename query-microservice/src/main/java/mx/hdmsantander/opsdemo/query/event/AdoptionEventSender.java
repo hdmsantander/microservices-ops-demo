@@ -14,7 +14,7 @@ import mx.hdmsantander.opsdemo.query.model.Pet;
 public class AdoptionEventSender {
 
 	@Autowired
-	StreamBridge streamBridge;
+	private StreamBridge streamBridge;
 
 	public void send(Pet pet) {
 		log.info("Sending adoption event for pet with the ID: {}", pet.getId());

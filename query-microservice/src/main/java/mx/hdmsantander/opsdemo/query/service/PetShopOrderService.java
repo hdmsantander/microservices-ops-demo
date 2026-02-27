@@ -17,10 +17,10 @@ import mx.hdmsantander.opsdemo.query.model.PetShopOrder;
 public class PetShopOrderService {
 
 	@Autowired
-	PetShopOrderRepository petShopOrderRepository;
+	private PetShopOrderRepository petShopOrderRepository;
 
 	@Autowired
-	MeterRegistry meterRegistry;
+	private MeterRegistry meterRegistry;
 
 	@PostConstruct
 	void registerGauge() {

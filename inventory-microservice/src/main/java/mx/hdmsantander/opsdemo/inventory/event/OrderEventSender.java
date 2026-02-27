@@ -12,7 +12,7 @@ import mx.hdmsantander.opsdemo.inventory.dto.OrderDto;
 public class OrderEventSender {
 
 	@Autowired
-	StreamBridge streamBridge;
+	private StreamBridge streamBridge;
 
 	public void send(OrderDto dto) {
 		log.info("Processing order DTO for order {} updating order and sending order event!", dto.getId());

@@ -21,7 +21,7 @@ import io.micrometer.tracing.Tracer;
 public class TracingHeaderConfiguration extends GenericFilterBean {
 
 	@Autowired
-	Tracer tracer;
+	private Tracer tracer;
 
 	@Override
 	public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)

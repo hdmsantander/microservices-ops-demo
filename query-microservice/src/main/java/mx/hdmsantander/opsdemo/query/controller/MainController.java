@@ -37,13 +37,13 @@ import mx.hdmsantander.opsdemo.query.service.PetShopOrderService;
 public class MainController {
 
 	@Autowired
-	PetService petService;
+	private PetService petService;
 
 	@Autowired
-	InventoryService inventoryService;
+	private InventoryService inventoryService;
 
 	@Autowired
-	PetShopOrderService petShopOrderService;
+	private PetShopOrderService petShopOrderService;
 
 	@Operation(summary = "Retrieve a list of pets", description = "Retrieves a list of pets with a certain status from the pet shop API at https://petstore.swagger.io")
 	@ApiResponses(value = {
@@ -70,7 +70,7 @@ public class MainController {
 		return ResponseEntity.status(HttpStatus.OK).body(pet);
 	}
 
-	@Operation(summary = "Check inventory", description = "Retrieves inventory from the inventory microservice at http://localhost:8079/v1/inventory")
+	@Operation(summary = "Check inventory", description = "Retrieves inventory from the inventory microservice at http://localhost:8081/v1/inventory")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", description = "Successful operation"),
 			@ApiResponse(responseCode = "400", description = "Bad request"),

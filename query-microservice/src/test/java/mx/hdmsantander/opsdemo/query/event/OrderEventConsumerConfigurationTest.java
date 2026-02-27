@@ -10,6 +10,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import mx.hdmsantander.opsdemo.query.data.PetShopOrderRepository;
 import mx.hdmsantander.opsdemo.query.model.PetShopOrder;
@@ -25,7 +26,7 @@ class OrderEventConsumerConfigurationTest {
 	@BeforeEach
 	void setUp() {
 		config = new OrderEventConsumerConfiguration();
-		config.petShopOrderRepository = petShopOrderRepository;
+		ReflectionTestUtils.setField(config, "petShopOrderRepository", petShopOrderRepository);
 	}
 
 	@Test

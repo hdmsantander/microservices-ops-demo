@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -31,8 +32,8 @@ class PetShopOrderServiceTest {
 	void setUp() {
 		MeterRegistry registry = new SimpleMeterRegistry();
 		petShopOrderService = new PetShopOrderService();
-		petShopOrderService.petShopOrderRepository = petShopOrderRepository;
-		petShopOrderService.meterRegistry = registry;
+		ReflectionTestUtils.setField(petShopOrderService, "petShopOrderRepository", petShopOrderRepository);
+		ReflectionTestUtils.setField(petShopOrderService, "meterRegistry", registry);
 	}
 
 	@Test

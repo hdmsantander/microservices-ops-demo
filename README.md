@@ -34,7 +34,7 @@ Or directly: `docker compose -f docker-compose-minimal.yml up`
 Then run the microservices locally:
 
 ```bash
-# Terminal 1 - Inventory microservice (port 8079)
+# Terminal 1 - Inventory microservice (port 8081)
 cd inventory-microservice && ./mvnw spring-boot:run
 
 # Terminal 2 - Query microservice (port 8080)
@@ -51,7 +51,7 @@ flowchart TB
 
     subgraph Microservices["Microservices"]
         Query["Query Service<br/>:8080<br/>• GET /v1/pet<br/>• POST /v1/pet/:id/adopt<br/>• GET /v1/orders<br/>• GET /v1/inventory"]
-        Inventory["Inventory Service<br/>:8079<br/>• GET /v1/inventory<br/>• Scheduled order sync"]
+        Inventory["Inventory Service<br/>:8081<br/>• GET /v1/inventory<br/>• Scheduled order sync"]
     end
 
     subgraph Kafka["Apache Kafka :9092"]
@@ -136,7 +136,7 @@ This microservice performs queries to the pet shop API. This service is used by 
 
 It also performs a scheduled query of the inventory of the pet shop API to "update" the inventory of the shop in the microservice ecosystem. The service performs a query of orders (generated randomly as integers in the range of 1-10) to the [orders endpoint](https://petstore.swagger.io/v2/store/order) of the pet shop API, triggering an event if the order exists, this event is consumed by the query microservice which in turn updates the entity in question in its database.
 
-The Swagger page is accessible at [http://localhost:8079/swagger-ui.html](http://localhost:8079/swagger-ui.html)
+The Swagger page is accessible at [http://localhost:8081/swagger-ui.html](http://localhost:8081/swagger-ui.html)
 
 ## Prometheus server
 

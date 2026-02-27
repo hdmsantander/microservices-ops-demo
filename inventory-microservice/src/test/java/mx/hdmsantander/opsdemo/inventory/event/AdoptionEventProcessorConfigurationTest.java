@@ -10,6 +10,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.messaging.Message;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.messaging.support.MessageBuilder;
 
 @ExtendWith(MockitoExtension.class)
@@ -23,7 +24,7 @@ class AdoptionEventProcessorConfigurationTest {
 	@BeforeEach
 	void setUp() {
 		config = new AdoptionEventProcessorConfiguration();
-		config.streamBridge = streamBridge;
+		ReflectionTestUtils.setField(config, "streamBridge", streamBridge);
 	}
 
 	@Test

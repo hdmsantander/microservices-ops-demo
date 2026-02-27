@@ -31,10 +31,10 @@ import mx.hdmsantander.opsdemo.inventory.service.InventoryService;
 class TracingPropagationTest {
 
 	@Autowired
-	Tracer tracer;
+	private Tracer tracer;
 
 	@Autowired
-	TestRestTemplate restTemplate;
+	private TestRestTemplate restTemplate;
 
 	@MockitoBean
 	InventoryService inventoryService;
