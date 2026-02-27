@@ -36,11 +36,11 @@ spring:
           brokers: localhost:9092
           replication-factor: 1
           consumer-properties:
-            "[value.deserializer]": org.springframework.kafka.support.serializer.JacksonJsonDeserializer
-            "[spring.json.trusted.packages]": "*"
-            "[spring.json.value.default.type]": mx.hdmsantander.opsdemo.query.event.OrderEvent
+            '[value.deserializer]': org.springframework.kafka.support.serializer.JacksonJsonDeserializer
+            '[spring.json.trusted.packages]': '*'
+            '[spring.json.value.default.type]': mx.hdmsantander.opsdemo.query.event.OrderEvent
           producer-properties:
-            "[value.serializer]": org.springframework.kafka.support.serializer.JacksonJsonSerializer
+            '[value.serializer]': org.springframework.kafka.support.serializer.JacksonJsonSerializer
 
 management:
   tracing:
