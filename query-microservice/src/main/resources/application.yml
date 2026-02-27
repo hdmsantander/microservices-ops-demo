@@ -32,7 +32,7 @@ spring:
           destination: adoption-events-v1
       kafka:
         binder:
-          # localhost:9092 works with network_mode: host; override via SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS
+          # landoop/fast-data-dev broker; override via SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS
           brokers: localhost:9092
           replication-factor: 1
           consumer-properties:

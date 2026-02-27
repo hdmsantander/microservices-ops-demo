@@ -1,16 +1,11 @@
 version: '3.9'
 services:
   kafka:
-    image: apache/kafka:4.0.1
+    image: landoop/fast-data-dev
     container_name: kafka-demo
     environment:
-      KAFKA_NODE_ID: 1
-      KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      ADV_HOST: 127.0.0.1
+      RUNTESTS: 0
     network_mode: host
   zipkin:
     image: openzipkin/zipkin

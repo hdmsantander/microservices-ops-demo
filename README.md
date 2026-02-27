@@ -5,7 +5,7 @@ This repository holds a Spring Boot OPS demo with the following components:
 - Two microservices (Spring Boot 4.0.3) that perform requests to the [Swagger's PetStore](https://petstore.swagger.io/) and communicate with each other using HTTP and [Spring for Apache Kafka](https://spring.io/projects/spring-kafka).
 - A Zipkin server that receives traces from the microservices via [Micrometer Tracing](https://micrometer.io/docs/tracing) (Brave).
 - A Prometheus server that scrapes metrics from [Spring Boot Actuator](https://docs.spring.io/spring-boot/docs/current/reference/html/actuator.html).
-- A Kafka cluster for event-driven communication between the microservices and the tracer.
+- A Kafka cluster (landoop/fast-data-dev) for event-driven communication between the microservices and the tracer, including a Web UI.
 
 ## Prerequisites
 
@@ -108,7 +108,7 @@ cd inventory-microservice && ./mvnw test
 
 ## Important Configuration
 
-- **Kafka**: Both services expect Kafka at `localhost:9092`. Override with `spring.cloud.stream.kafka.binder.brokers` in `application.yml` or via environment variables.
+- **Kafka**: Uses `landoop/fast-data-dev` (Kafka + Zookeeper + Schema Registry + Web UI). Broker at `localhost:9092`, Web UI at [http://localhost:3030](http://localhost:3030). Override broker with `spring.cloud.stream.kafka.binder.brokers` or `SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS`.
 - **Spring Cloud 2025.1.0**: Required for Spring Boot 4.0.3 compatibility.
 - **Kafka JSON (Spring Kafka 4.x)**: Uses `JacksonJsonDeserializer` and `JacksonJsonSerializer`. Configure via binder-level `consumer-properties` and `producer-properties` (not bindings-level). Use bracket notation for dotted keys, e.g. `"[value.deserializer]"`, `"[spring.json.trusted.packages]"`, `"[spring.json.value.default.type]"`.
 
@@ -212,4 +212,4 @@ The query microservice performs a GET of the pet ID to the pet shop API, and if 
 
 ![Kafka server](.img/5.png)
 
-An interface to see the topics and events found in the Kafka server is accessible at [http://localhost:3030](http://localhost:3030)
+The stack uses `landoop/fast-data-dev`, which includes Kafka, Zookeeper, Schema Registry, and a Web UI. The Kafka Web UI for viewing topics and events is accessible at [http://localhost:3030](http://localhost:3030).
