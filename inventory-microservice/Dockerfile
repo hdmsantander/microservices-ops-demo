@@ -11,8 +11,8 @@ COPY ${JAR_FILE} application.jar
 # Use jarmode=tools (replaces deprecated layertools) to extract layered jar
 RUN java -Djarmode=tools -jar application.jar extract --layers --destination extracted
 
-# Rename application jar to fixed name for portable ENTRYPOINT
-RUN cp extracted/application/*.jar extracted/application/application.jar
+# Copy application jar to fixed name for portable ENTRYPOINT (avoid cp same-file error)
+RUN cp extracted/application/*.jar ./application.jar
 
 # =============================================================================
 # Runtime stage: Minimal production image
@@ -33,6 +33,7 @@ COPY --from=builder /builder/extracted/dependencies/ ./
 COPY --from=builder /builder/extracted/spring-boot-loader/ ./
 COPY --from=builder /builder/extracted/snapshot-dependencies/ ./
 COPY --from=builder /builder/extracted/application/ ./
+COPY --from=builder /builder/application.jar ./
 
 # Ensure application files are owned by non-root user
 RUN chown -R ${USER}:${USER} /application
