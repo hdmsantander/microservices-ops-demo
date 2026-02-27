@@ -22,14 +22,14 @@ start_full() {
 case "${1:-}" in
     minimal|--minimal|-m)
         start_minimal
-        ;;
+    ;;
     "")
         start_full
-        ;;
+    ;;
     *)
         echo "Usage: $0 [minimal|--minimal|-m]"
         echo "  (no args)  Build and start full stack (microservices + Kafka + Zipkin + Prometheus)"
         echo "  minimal   Start infrastructure only (Kafka + Zipkin + Prometheus), run microservices locally"
         exit 1
-        ;;
+    ;;
 esac
