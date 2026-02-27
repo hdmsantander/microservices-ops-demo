@@ -79,6 +79,10 @@ public class MainController {
 	public ResponseEntity<JsonNode> getInventory() {
 		log.info("Controller /inventory got a request, querying the inventory service...");
 		JsonNode inventory = inventoryService.getInventory();
+		if (inventory == null || inventory.isEmpty()) {
+			log.warn("Inventory from inventory microservice returned empty; mapping to server error");
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+		}
 		return ResponseEntity.status(HttpStatus.OK).body(inventory);
 	}
 

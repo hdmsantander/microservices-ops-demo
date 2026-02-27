@@ -53,10 +53,17 @@ class MainControllerTest {
 
 	@Test
 	void getInventory_returnsOk() throws Exception {
-		JsonNode node = new ObjectMapper().createObjectNode();
+		JsonNode node = new ObjectMapper().createObjectNode().put("available", 0).put("pending", 0).put("sold", 0);
 		when(inventoryService.getInventory()).thenReturn(node);
 		mockMvc.perform(get("/v1/inventory").accept(MediaType.APPLICATION_JSON))
 				.andExpect(status().isOk());
+	}
+
+	@Test
+	void getInventory_returnsServerError_whenEmpty() throws Exception {
+		when(inventoryService.getInventory()).thenReturn(new ObjectMapper().createObjectNode());
+		mockMvc.perform(get("/v1/inventory").accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isInternalServerError());
 	}
 
 	@Test
