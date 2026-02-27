@@ -47,7 +47,13 @@ management:
     export:
       enabled: true
       zipkin:
-        endpoint: http://localhost:9411/api/v2/spans
+        # transport: kafka (default) | http. Use http to send spans via HTTP instead of Kafka.
+        transport: kafka
+        kafka:
+          bootstrap-servers: localhost:9092
+          topic: zipkin
+        # Optional HTTP sender. Set transport: http and endpoint to use HTTP instead of Kafka.
+        # endpoint: http://localhost:9411/api/v2/spans
   endpoints:
     web:
       exposure:
