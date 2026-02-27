@@ -1,5 +1,5 @@
 # Builder environment
-FROM adoptopenjdk:11-jre-hotspot as builder
+FROM eclipse-temurin:25-jre as builder
 
 WORKDIR /application
 
@@ -10,7 +10,7 @@ COPY ${JAR_FILE} application.jar
 RUN java -Djarmode=layertools -jar application.jar extract
 
 # Run environment
-FROM amazoncorretto:11-alpine
+FROM eclipse-temurin:25-jre-alpine
 
 ENV SPRING_PROFILES_ACTIVE=development
 
