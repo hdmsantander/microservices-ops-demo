@@ -1,28 +1,48 @@
-# Builder environment
-FROM eclipse-temurin:25-jre as builder
+# =============================================================================
+# Builder stage: Extract Spring Boot layers for optimal Docker caching
+# =============================================================================
+FROM eclipse-temurin:25-jre AS builder
+
+WORKDIR /builder
+
+ARG JAR_FILE=target/*.jar
+COPY ${JAR_FILE} application.jar
+
+# Use jarmode=tools (replaces deprecated layertools) to extract layered jar
+RUN java -Djarmode=tools -jar application.jar extract --layers --destination extracted
+
+# =============================================================================
+# Runtime stage: Minimal production image
+# =============================================================================
+FROM eclipse-temurin:25-jre-alpine
+
+# Security: Run as non-root user
+ENV USER=spring
+ENV UID=10001
+ENV GID=10001
+
+RUN addgroup -g ${GID} ${USER} && adduser -u ${UID} -G ${USER} -D ${USER}
 
 WORKDIR /application
 
-ARG JAR_FILE=target/*.jar
+# Copy layers in order of change frequency (least to most) for optimal caching
+COPY --from=builder /builder/extracted/dependencies/ ./
+COPY --from=builder /builder/extracted/spring-boot-loader/ ./
+COPY --from=builder /builder/extracted/snapshot-dependencies/ ./
+COPY --from=builder /builder/extracted/application/ ./
 
-COPY ${JAR_FILE} application.jar
+# Ensure application files are owned by non-root user
+RUN chown -R ${USER}:${USER} /application
+USER ${USER}
 
-RUN java -Djarmode=layertools -jar application.jar extract
-
-# Run environment
-FROM eclipse-temurin:25-jre-alpine
+# JVM tuning for containers: respect memory limits, use container-aware defaults
+ENV JAVA_TOOL_OPTIONS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=50.0"
 
 ENV SPRING_PROFILES_ACTIVE=development
 
-ENV USER spring
-ENV UID 1001
-ENV HOME /home/$USER
-
-WORKDIR $HOME
-
-COPY --from=builder /application/dependencies/ ./
-COPY --from=builder /application/spring-boot-loader/ ./
-COPY --from=builder /application/snapshot-dependencies/ ./
-COPY --from=builder /application/application/ ./
-
+# Use JarLauncher with extracted layout (AOT cache and CDS friendly)
 ENTRYPOINT ["java", "org.springframework.boot.loader.JarLauncher"]
+
+# Health check via Spring Boot Actuator (query service runs on 8080)
+HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
+    CMD wget -q --spider http://localhost:8080/actuator/health || exit 1
