@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.TestRestTemplate;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate;
@@ -24,10 +26,12 @@ import mx.hdmsantander.opsdemo.inventory.service.InventoryService;
  * spans are created and sent when handling HTTP requests. Asserts that
  * X-Zipkin-Trace-Id header is present in responses, confirming trace
  * propagation through the request/response cycle.
+ * Uses HTTP transport for Zipkin (no Kafka client) and SAME_THREAD execution.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestRestTemplate
 @ActiveProfiles("test")
+@Execution(ExecutionMode.SAME_THREAD)
 class TracingPropagationTest {
 
 	@Autowired

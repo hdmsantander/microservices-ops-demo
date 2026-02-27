@@ -1,4 +1,4 @@
-# Use HTTP for Zipkin in tests (no Kafka required)
+# Use HTTP for Zipkin in tests (Kafka client disabled; no Kafka required)
 management:
   tracing:
     export:
