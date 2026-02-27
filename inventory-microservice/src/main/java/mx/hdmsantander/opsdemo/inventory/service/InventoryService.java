@@ -13,6 +13,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.micrometer.core.annotation.Timed;
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.Tracer;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -29,6 +31,9 @@ public class InventoryService {
 
 	@Autowired
 	private OrderService orderService;
+
+	@Autowired
+	private Tracer tracer;
 
 	@Timed(value = "inventory.query.time", description = "Time taken to get the inventory from the pet shop API")
 	@Retryable(retryFor = ResourceAccessException.class, maxAttempts = 3, backoff = @Backoff(delay = 500, multiplier = 2))
@@ -53,10 +58,14 @@ public class InventoryService {
 
 	@Scheduled(fixedDelay = 20000)
 	public void refreshOrders() {
-
-		log.info("Running scheduled update of the current orders");
-		orderService.updateOrders();
-
+		Span span = tracer.nextSpan().name("refresh-orders").start();
+		try (Tracer.SpanInScope ws = tracer.withSpan(span)) {
+			span.tag("scheduled", "true");
+			log.info("Running scheduled update of the current orders");
+			orderService.updateOrders();
+		} finally {
+			span.end();
+		}
 	}
 
 }
