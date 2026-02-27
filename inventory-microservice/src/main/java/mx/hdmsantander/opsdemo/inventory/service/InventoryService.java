@@ -21,11 +21,10 @@ public class InventoryService {
 
 	private static final String INVENTORY_SERVICE_URL = "https://petstore.swagger.io/v2/store/inventory";
 
-	@Autowired
-	private RestTemplate restTemplate;
+	private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
 	@Autowired
-	private ObjectMapper objectMapper;
+	private RestTemplate restTemplate;
 
 	@Autowired
 	private OrderService orderService;
@@ -50,10 +49,10 @@ public class InventoryService {
 
 	private JsonNode parseJson(String body) {
 		try {
-			return body != null ? objectMapper.readTree(body) : objectMapper.createObjectNode();
+			return body != null ? OBJECT_MAPPER.readTree(body) : OBJECT_MAPPER.createObjectNode();
 		} catch (Exception e) {
 			log.warn("Failed to parse inventory response, returning empty object: {}", e.getMessage());
-			return objectMapper.createObjectNode();
+			return OBJECT_MAPPER.createObjectNode();
 		}
 	}
 
