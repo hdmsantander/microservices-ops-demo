@@ -89,7 +89,7 @@ cd inventory-microservice && ./mvnw test
 
 - **Kafka**: Both services expect Kafka at `localhost:9092`. Override with `spring.cloud.stream.kafka.binder.brokers` in `application.yml` or via environment variables.
 - **Spring Cloud 2025.1.0**: Required for Spring Boot 4.0.3 compatibility.
-- **Kafka JSON (Spring Kafka 4.x)**: Uses `JacksonJsonDeserializer` and `JacksonJsonSerializer`; configuration properties `spring.json.trusted.packages` and `spring.json.value.default.type` apply.
+- **Kafka JSON (Spring Kafka 4.x)**: Uses `JacksonJsonDeserializer` and `JacksonJsonSerializer`. Configure via binder-level `consumer-properties` and `producer-properties` (not bindings-level). Use bracket notation for dotted keys, e.g. `"[value.deserializer]"`, `"[spring.json.trusted.packages]"`, `"[spring.json.value.default.type]"`.
 
 ## Query microservice
 
