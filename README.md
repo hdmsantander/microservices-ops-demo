@@ -9,7 +9,7 @@ This repository holds a Spring Boot OPS demo with the following components:
 
 ## Prerequisites
 
-- **Java 17** or higher
+- **Java 21** or higher (Java 25 supported when JDK 25 is available; set `java.version` in pom.xml)
 - **Docker** and **Docker Compose** (for running the full stack)
 - **Maven 3.8+** (or use the included Maven wrapper `./mvnw`)
 
@@ -27,6 +27,13 @@ This script packages both microservices, builds Docker images, and starts the en
 
 ```bash
 ./start.sh minimal
+```
+
+### Skip tests when packaging (full stack only)
+
+```bash
+./start.sh --skip-tests
+# Or combined: ./start.sh minimal --skip-tests  (--skip-tests ignored for minimal)
 ```
 
 Or directly: `docker compose -f docker-compose-minimal.yml up`

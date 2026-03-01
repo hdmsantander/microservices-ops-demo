@@ -13,17 +13,17 @@ import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.converter.HttpMessageNotWritableException;
 import org.springframework.http.converter.StringHttpMessageConverter;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * Configures Jackson ObjectMapper and RestTemplate for JSON handling.
+ * Configures ObjectMapper and RestTemplate for JSON handling.
  * Uses RestTemplateBuilder for automatic trace context propagation (B3 headers).
  * Provides JsonNodeHttpMessageConverter for deserializing JSON to JsonNode.
- * Keeps MappingJackson2HttpMessageConverter for Pet and other POJO types.
+ * Uses JacksonJsonHttpMessageConverter (Jackson 3) for Pet and other POJO types.
  */
 @Configuration
 public class JacksonConfiguration {
@@ -35,12 +35,11 @@ public class JacksonConfiguration {
 
 	@Bean
 	public RestTemplate restTemplate(RestTemplateBuilder builder, ObjectMapper objectMapper) {
-		MappingJackson2HttpMessageConverter jacksonConverter = new MappingJackson2HttpMessageConverter(objectMapper);
 		return builder
 				.additionalMessageConverters(
 						new StringHttpMessageConverter(),
 						new JsonNodeHttpMessageConverter(objectMapper),
-						jacksonConverter)
+						new JacksonJsonHttpMessageConverter())
 				.build();
 	}
 
