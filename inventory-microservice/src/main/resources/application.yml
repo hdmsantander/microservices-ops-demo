@@ -47,6 +47,11 @@ spring:
             "[value.serializer]": org.springframework.kafka.support.serializer.JacksonJsonSerializer
 
 management:
+  metrics:
+    enable:
+      spring:
+        kafka:
+          template: false
   tracing:
     sampling:
       probability: 1.0

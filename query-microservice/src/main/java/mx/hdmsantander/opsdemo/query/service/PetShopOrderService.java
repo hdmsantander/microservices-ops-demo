@@ -24,8 +24,15 @@ public class PetShopOrderService {
 
 	@PostConstruct
 	void registerGauge() {
-		Gauge.builder("orders.size", petShopOrderRepository, r -> (double) r.count())
+		Gauge.builder("orders.size", petShopOrderRepository, r -> {
+			try {
+				return r != null ? (double) r.count() : 0.0;
+			} catch (Exception e) {
+				return 0.0;
+			}
+		})
 				.description("Number of orders in the system")
+				.tag("service", "query")
 				.register(meterRegistry);
 	}
 
