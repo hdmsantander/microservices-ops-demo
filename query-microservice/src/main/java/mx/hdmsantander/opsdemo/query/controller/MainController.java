@@ -76,14 +76,14 @@ public class MainController {
 			@ApiResponse(responseCode = "400", description = "Bad request"),
 			@ApiResponse(responseCode = "500", description = "Error while retrieving inventory") })
 	@GetMapping(path = "/inventory", produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<JsonNode> getInventory() {
+	public ResponseEntity<String> getInventory() {
 		log.info("Controller /inventory got a request, querying the inventory service...");
 		JsonNode inventory = inventoryService.getInventory();
 		if (inventory == null || inventory.isEmpty()) {
 			log.warn("Inventory from inventory microservice returned empty; mapping to server error");
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
 		}
-		return ResponseEntity.status(HttpStatus.OK).body(inventory);
+		return ResponseEntity.status(HttpStatus.OK).body(inventory.toPrettyString());
 	}
 
 	@Operation(summary = "Get orders", description = "Retrieves a list of orders received through events from the inventory microservice")
