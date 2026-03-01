@@ -11,8 +11,9 @@ pom.xml.next
 release.properties
 dependency-reduced-pom.xml
 buildNumber.properties
+.mvn/
+**/.mvn/
 .mvn/timing.properties
-!**/.mvn/wrapper/maven-wrapper.properties
 
 # Local Maven repository (never commit dependencies)
 .m2/
@@ -40,7 +41,6 @@ Dockerfile.local
 *.log
 hs_err_pid*
 replay_pid*
-!**/.mvn/wrapper/maven-wrapper.jar
 
 # =============================================================================
 # Spring Boot

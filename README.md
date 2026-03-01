@@ -11,7 +11,7 @@ This repository holds a Spring Boot OPS demo with the following components:
 
 - **Java 21** or higher (Java 25 supported when JDK 25 is available; set `java.version` in pom.xml)
 - **Docker** and **Docker Compose** (for running the full stack)
-- **Maven 3.8+** (or use the included Maven wrapper `./mvnw`)
+- **Maven 3.8+**
 
 ## Quick Start
 
@@ -42,10 +42,10 @@ Then run the microservices locally:
 
 ```bash
 # Terminal 1 - Inventory microservice (port 8081)
-cd inventory-microservice && ./mvnw spring-boot:run
+cd inventory-microservice && mvn spring-boot:run
 
 # Terminal 2 - Query microservice (port 8082)
-cd query-microservice && ./mvnw spring-boot:run
+cd query-microservice && mvn spring-boot:run
 ```
 
 ## Architecture & Event Flow
@@ -107,10 +107,10 @@ flowchart TB
 
 ```bash
 # Query microservice
-cd query-microservice && ./mvnw test
+cd query-microservice && mvn test
 
 # Inventory microservice
-cd inventory-microservice && ./mvnw test
+cd inventory-microservice && mvn test
 ```
 
 ## Important Configuration

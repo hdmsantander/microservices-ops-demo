@@ -42,8 +42,8 @@ start_minimal() {
 
 start_full() {
     echo "Packaging microservices..."
-    (cd query-microservice && ./mvnw -q package ${SKIP_TESTS}) && \
-    (cd inventory-microservice && ./mvnw -q package ${SKIP_TESTS}) && \
+    (cd query-microservice && mvn -q package ${SKIP_TESTS}) && \
+    (cd inventory-microservice && mvn -q package ${SKIP_TESTS}) && \
     echo "Success building sources! Starting full environment..." && \
     docker compose -f "$COMPOSE_FULL" build && \
     docker compose -f "$COMPOSE_FULL" up
