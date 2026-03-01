@@ -12,7 +12,7 @@ import io.swagger.v3.oas.models.info.License;
 public class OpenApiConfiguration {
 
 	@Bean
-	public OpenAPI customOpenAPI() {
+	OpenAPI customOpenAPI() {
 		return new OpenAPI()
 				.info(new Info()
 						.title("REST API of the inventory microservice")

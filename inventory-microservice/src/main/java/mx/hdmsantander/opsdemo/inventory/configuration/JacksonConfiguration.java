@@ -34,7 +34,7 @@ public class JacksonConfiguration {
 	}
 
 	@Bean
-	public RestTemplate restTemplate(RestTemplateBuilder builder, ObjectMapper objectMapper) {
+	RestTemplate restTemplate(RestTemplateBuilder builder, ObjectMapper objectMapper) {
 		return builder
 				.additionalMessageConverters(
 						new StringHttpMessageConverter(),
