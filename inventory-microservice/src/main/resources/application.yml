@@ -46,6 +46,40 @@ spring:
           producer-properties:
             "[value.serializer]": org.springframework.kafka.support.serializer.JacksonJsonSerializer
 
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        failureRateThreshold: 20
+        slowCallRateThreshold: 100
+        slowCallDurationThreshold: 60s
+        permittedNumberOfCallsInHalfOpenState: 5
+        slidingWindowSize: 20
+        minimumNumberOfCalls: 5
+    instances:
+      inventoryService:
+        baseConfig: default
+      orderService:
+        baseConfig: default
+    aspect-order: 1
+  retry:
+    configs:
+      default:
+        maxAttempts: 5
+        waitDuration: 500ms
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+      orderService:
+        baseConfig: default
+        ignoreExceptions:
+          - "org.springframework.web.client.HttpClientErrorException$NotFound"
+    instances:
+      inventoryService:
+        baseConfig: default
+      orderService:
+        baseConfig: orderService
+    aspect-order: 2
+
 management:
   metrics:
     enable:

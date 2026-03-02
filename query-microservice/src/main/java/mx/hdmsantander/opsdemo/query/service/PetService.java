@@ -8,12 +8,11 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import io.micrometer.core.annotation.Timed;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
@@ -36,7 +35,8 @@ public class PetService {
 	@Autowired
 	private MeterRegistry meterRegistry;
 
-	@Retryable(retryFor = ResourceAccessException.class, maxAttempts = 3, backoff = @Backoff(delay = 500, multiplier = 2))
+	@CircuitBreaker(name = "petService", fallbackMethod = "getPetListByStatusFallback")
+	@Retry(name = "petService")
 	@Timed(value = "pet.query.time", description = "Time taken to query and return the pet shop list for all pets")
 	public List<Pet> getPetListByStatus(PetStatus status) {
 
@@ -58,6 +58,13 @@ public class PetService {
 
 	}
 
+	private List<Pet> getPetListByStatusFallback(PetStatus status, Exception e) {
+		log.warn("Circuit breaker fallback for getPetListByStatus: {}", e.getMessage());
+		return List.of();
+	}
+
+	@CircuitBreaker(name = "petService", fallbackMethod = "adoptPetByIdFallback")
+	@Retry(name = "petService")
 	@Timed(value = "pet.adoption.time", description = "Time taken to adopt a pet")
 	public Pet adoptPetById(String id) {
 
@@ -85,6 +92,11 @@ public class PetService {
 
 		return pet;
 
+	}
+
+	private Pet adoptPetByIdFallback(String id, Exception e) {
+		log.warn("Circuit breaker fallback for adoptPetById: {}", e.getMessage());
+		return null;
 	}
 
 }

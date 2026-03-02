@@ -43,6 +43,50 @@ spring:
           producer-properties:
             '[value.serializer]': org.springframework.kafka.support.serializer.JacksonJsonSerializer
 
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        failureRateThreshold: 20
+        slowCallRateThreshold: 100
+        slowCallDurationThreshold: 60s
+        permittedNumberOfCallsInHalfOpenState: 5
+        slidingWindowSize: 20
+        minimumNumberOfCalls: 5
+    instances:
+      petService:
+        baseConfig: default
+      inventoryService:
+        baseConfig: default
+    aspect-order: 1
+  retry:
+    configs:
+      external:
+        maxAttempts: 5
+        waitDuration: 500ms
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+      internal:
+        maxAttempts: 2
+        waitDuration: 500ms
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+    instances:
+      petService:
+        baseConfig: external
+      inventoryService:
+        baseConfig: internal
+    aspect-order: 2
+  ratelimiter:
+    configs:
+      default:
+        limitForPeriod: 5
+        limitRefreshPeriod: 1s
+        timeoutDuration: 3s
+    instances:
+      inventoryService:
+        baseConfig: default
+
 management:
   metrics:
     enable:
