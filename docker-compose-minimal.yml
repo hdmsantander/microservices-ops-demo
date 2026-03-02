@@ -16,7 +16,7 @@ services:
     depends_on:
       - kafka
   prometheus:
-    image: prom/prometheus
+    image: prom/prometheus:v2.55.0
     container_name: prometheus-demo
     volumes:
       - ./prometheus/:/etc/prometheus/

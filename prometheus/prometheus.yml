@@ -1,4 +1,4 @@
-# Sample Prometheus config
+# Prometheus config (compatible with Prometheus 2.45+)
 # This assumes that your Prometheus instance can access this application on localhost:8081 and localhost:8082
 
 global:
