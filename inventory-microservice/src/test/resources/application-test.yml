@@ -1,0 +1,7 @@
+# Use HTTP for Zipkin in tests (Kafka client disabled; no Kafka required)
+management:
+  tracing:
+    export:
+      zipkin:
+        transport: http
+        endpoint: http://localhost:9411/api/v2/spans

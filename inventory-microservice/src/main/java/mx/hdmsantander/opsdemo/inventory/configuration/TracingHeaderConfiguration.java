@@ -2,31 +2,26 @@ package mx.hdmsantander.opsdemo.inventory.configuration;
 
 import java.io.IOException;
 
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.HttpServletResponse;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cloud.sleuth.Span;
-import org.springframework.cloud.sleuth.TraceContext;
-import org.springframework.cloud.sleuth.Tracer;
-import org.springframework.cloud.sleuth.autoconfig.instrument.web.SleuthWebProperties;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.GenericFilterBean;
 
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.Tracer;
+
 @Component
-@Order(SleuthWebProperties.TRACING_FILTER_ORDER + 1)
+@Order(-1)
 public class TracingHeaderConfiguration extends GenericFilterBean {
 
-	private final Tracer tracer;
-
 	@Autowired
-	public TracingHeaderConfiguration(Tracer tracer) {
-		this.tracer = tracer;
-	}
+	private Tracer tracer;
 
 	@Override
 	public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
@@ -40,17 +35,12 @@ public class TracingHeaderConfiguration extends GenericFilterBean {
 		}
 
 		chain.doFilter(request, response);
-
 	}
 
-	private String buildTrace(TraceContext t) {
-
-		String id = String.join("=", "Id", t.traceId());
-		String parent = String.join("=", "Parent", t.parentId());
-		String sampled = String.join("=", "Sampled", String.valueOf(t.sampled()));
-
+	private String buildTrace(io.micrometer.tracing.TraceContext ctx) {
+		String id = String.join("=", "Id", ctx.traceId());
+		String parent = String.join("=", "Parent", ctx.spanId());
+		String sampled = String.join("=", "Sampled", String.valueOf(ctx.sampled()));
 		return String.join(";", id, parent, sampled);
-
 	}
-
 }

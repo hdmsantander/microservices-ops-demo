@@ -27,7 +27,7 @@ public class PetService {
 
 	private static final String PET_SHOP_BASE_URL = "https://petstore.swagger.io/v2";
 
-	@Autowired
+	@Autowired	
 	private RestTemplate restTemplate;
 
 	@Autowired
@@ -36,7 +36,7 @@ public class PetService {
 	@Autowired
 	private MeterRegistry meterRegistry;
 
-	@Retryable(include = ResourceAccessException.class, maxAttempts = 3, backoff = @Backoff(delay = 500, multiplier = 2))
+	@Retryable(retryFor = ResourceAccessException.class, maxAttempts = 3, backoff = @Backoff(delay = 500, multiplier = 2))
 	@Timed(value = "pet.query.time", description = "Time taken to query and return the pet shop list for all pets")
 	public List<Pet> getPetListByStatus(PetStatus status) {
 

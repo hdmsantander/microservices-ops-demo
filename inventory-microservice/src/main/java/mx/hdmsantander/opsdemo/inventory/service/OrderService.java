@@ -2,7 +2,6 @@ package mx.hdmsantander.opsdemo.inventory.service;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ThreadLocalRandom;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -34,19 +33,15 @@ public class OrderService {
 	private MeterRegistry meterRegistry;
 
 	@Timed(value = "orders.query.time", description = "Time taken to query the pet shop API to refresh orders")
-	@Retryable(include = ResourceAccessException.class, maxAttempts = 3, backoff = @Backoff(delay = 500, multiplier = 2))
+	@Retryable(retryFor = ResourceAccessException.class, maxAttempts = 3, backoff = @Backoff(delay = 500, multiplier = 2))
 	public void updateOrders() {
-
 		log.info("Updating orders using the pet shop API at: " + ORDER_SERVICE_BASE_URL);
+		// Petstore accepts order IDs <= 5 or > 10; use 1-5 to avoid 404
+		int[] orderIds = { 1, 2, 3, 4, 5 };
 
-		for (int i = 0; i < 3; i++) {
-
-			int order = ThreadLocalRandom.current().nextInt(1, 10);
-
+		for (int order : orderIds) {
 			try {
-
 				log.info("Retrieving the order with ID: " + order);
-
 				Map<String, Integer> uriVariables = new HashMap<>();
 				uriVariables.put("order", order);
 
@@ -55,18 +50,16 @@ public class OrderService {
 
 				log.info("The request got back the status: " + responseEntity.getStatusCode());
 
-				if (responseEntity.getStatusCode().is2xxSuccessful()) {
-
+				if (responseEntity.getStatusCode().is2xxSuccessful() && responseEntity.getBody() != null) {
 					log.info("Request was successful! Emitting event to update orders!");
 					meterRegistry.counter("orders.updated").increment();
 					orderEventService.send(responseEntity.getBody());
-
 				}
-
+			} catch (org.springframework.web.client.HttpClientErrorException.NotFound e) {
+				log.debug("Order {} not found in petstore (expected for demo API)", order);
 			} catch (Exception e) {
-				log.error("Error updating order with ID: " + order, e);
+				log.warn("Error updating order with ID {}: {}", order, e.getMessage());
 			}
-
 		}
 	}
 }

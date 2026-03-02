@@ -1,4 +1,3 @@
-version: '3.9'
 services:
   zipkin:
     image: openzipkin/zipkin
@@ -9,7 +8,7 @@ services:
     depends_on:
       - kafka
   prometheus:
-    image: prom/prometheus
+    image: prom/prometheus:v2.55.0
     container_name: prometheus-demo
     volumes:
       - ./prometheus/:/etc/prometheus/
@@ -17,13 +16,11 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
     network_mode: host
   kafka:
-    image: landoop/fast-data-dev:cp3.3.0
+    image: landoop/fast-data-dev
     container_name: kafka-demo
     environment:
-      ADV_HOST: localhost
+      ADV_HOST: 127.0.0.1
       RUNTESTS: 0
-      FORWARDLOGS: 0
-      SAMPLEDATA: 0
     network_mode: host
   query-microservice:
     build:

@@ -1,14 +1,14 @@
 package mx.hdmsantander.opsdemo.query.service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
-import com.google.common.util.concurrent.AtomicDouble;
-
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import mx.hdmsantander.opsdemo.query.data.PetShopOrderRepository;
 import mx.hdmsantander.opsdemo.query.model.PetShopOrder;
@@ -21,20 +21,22 @@ public class PetShopOrderService {
 
 	@Autowired
 	private MeterRegistry meterRegistry;
-	
-	private AtomicDouble orderCount = new AtomicDouble();
-	
-	public List<PetShopOrder> getAllOrders() {
 
-		List<PetShopOrder> orders = StreamSupport.stream(petShopOrderRepository.findAll().spliterator(), false)
-				.collect(Collectors.toList());
-		
-		orderCount.set(orders.size());
-		
-		meterRegistry.gauge("orders.size", orderCount);
-		
-		return orders;
-
+	@PostConstruct
+	void registerGauge() {
+		Gauge.builder("orders.size", petShopOrderRepository, r -> {
+			try {
+				return r != null ? (double) r.count() : 0.0;
+			} catch (Exception e) {
+				return 0.0;
+			}
+		})
+				.description("Number of orders in the system")
+				.tag("service", "query")
+				.register(meterRegistry);
 	}
 
+	public List<PetShopOrder> getAllOrders() {
+		return StreamSupport.stream(petShopOrderRepository.findAll(Sort.unsorted()).spliterator(), false).toList();
+	}
 }
