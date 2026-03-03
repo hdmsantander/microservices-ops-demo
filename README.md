@@ -221,3 +221,31 @@ The query microservice performs a GET of the pet ID to the pet shop API, and if 
 ![Kafka server](.img/5.png)
 
 The stack uses `landoop/fast-data-dev`, which includes Kafka, Zookeeper, Schema Registry, and a Web UI. The Kafka Web UI for viewing topics and events is accessible at [http://localhost:3030](http://localhost:3030).
+
+## CI/CD and Code Coverage
+
+### GitHub Actions
+
+- **Run Tests** (`.github/workflows/test.yml`): Runs tests for both microservices on every pull request targeting `main`, `master`, or `develop`.
+- **Coverage Report** (`.github/workflows/coverage.yml`): Generates JaCoCo HTML coverage reports and publishes them to GitHub Pages. Trigger manually via **Actions → Coverage Report → Run workflow** (optionally select a branch).
+
+### Enabling GitHub Pages for Coverage Reports
+
+1. Go to **Settings → Pages** in the repository
+2. Under **Build and deployment**, set **Source** to **GitHub Actions**
+3. Run the "Coverage Report" workflow from the Actions tab
+4. Reports will be available at `https://<org>.github.io/<repo>/` (e.g. query-microservice and inventory-microservice links)
+
+### Local Coverage
+
+Run tests with coverage and generate the HTML report:
+
+```bash
+# Query microservice
+mvn verify -f query-microservice/pom.xml
+
+# Inventory microservice
+mvn verify -f inventory-microservice/pom.xml
+```
+
+Reports are written to `target/site/jacoco/index.html` in each microservice directory.
