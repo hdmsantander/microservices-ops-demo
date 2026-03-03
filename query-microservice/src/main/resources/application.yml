@@ -47,11 +47,11 @@ resilience4j:
   circuitbreaker:
     configs:
       default:
-        failureRateThreshold: 20
+        failureRateThreshold: 50
         slowCallRateThreshold: 100
         slowCallDurationThreshold: 60s
         permittedNumberOfCallsInHalfOpenState: 5
-        slidingWindowSize: 20
+        slidingWindowSize: 100
         minimumNumberOfCalls: 5
     instances:
       petService:
