@@ -2,7 +2,7 @@
 
 ## Overview
 
-This report documents the OrderService resilience logic for retrieving orders from the PetShop API, the different scenarios needed to trigger expected circuit breaker behavior, and the expected runtime behavior including probability considerations for the PetStore API's `nextInt`-based order ID availability.
+This report documents the OrderService resilience logic for retrieving orders from the PetShop API, the different scenarios needed to trigger expected circuit breaker behavior, and the expected runtime behavior including probability considerations for `ThreadLocalRandom.nextInt(1, 11)` (range 1–10).
 
 ---
 
@@ -10,8 +10,9 @@ This report documents the OrderService resilience logic for retrieving orders fr
 
 ### 1.1 Update Flow
 
-- **Method:** `updateOrders()` — iterates over order IDs `{1, 2, 3, 4, 5}` (PetStore accepts IDs ≤5 or >10)
-- **Per order:** Calls `self.fetchOrder(orderId)` through the AOP proxy (enabling Circuit Breaker and Retry)
+- **Method:** `updateOrders()` — iterates **3 times**; each iteration draws a random order ID
+- **Order ID selection:** `ThreadLocalRandom.current().nextInt(1, 11)` → range **1–10** (PetStore: IDs ≤5 or >10 valid; 6–10 return 404)
+- **Per iteration:** Calls `self.fetchOrder(orderId)` (via AOP proxy for Circuit Breaker/Retry)
 - **Error handling:**  
   - `HttpClientErrorException.NotFound` (404): Logged, no retry (via `ignoreExceptions` in Retry config)  
   - Other exceptions: Logged, fallback returns `null`
@@ -20,7 +21,7 @@ This report documents the OrderService resilience logic for retrieving orders fr
 
 | Pattern      | Instance     | Settings |
 |-------------|--------------|----------|
-| CircuitBreaker | orderService | failureRateThreshold: 20, slowCallRateThreshold: 100, slowCallDurationThreshold: 60s, permittedNumberOfCallsInHalfOpenState: 5, slidingWindowSize: 20, minimumNumberOfCalls: 5 |
+| CircuitBreaker | orderService | failureRateThreshold: 50, slowCallRateThreshold: 100, slowCallDurationThreshold: 60s, permittedNumberOfCallsInHalfOpenState: 5, slidingWindowSize: 100, minimumNumberOfCalls: 5 |
 | Retry       | orderService | maxAttempts: 5, waitDuration: 500ms, exponentialBackoff, **ignoreExceptions: NotFound** |
 
 ---
@@ -31,47 +32,47 @@ This report documents the OrderService resilience logic for retrieving orders fr
 
 | # | Scenario                  | Mock Response                         | Expected API Calls | Events Sent | Circuit State After |
 |---|---------------------------|----------------------------------------|--------------------|-------------|---------------------|
-| 1 | All success                | `200 OK` + `OrderDto` for each order   | 5                  | 5           | CLOSED              |
-| 2 | All 404 (expected)         | `404 Not Found` for each order         | 5 (no retry)       | 0           | CLOSED*             |
-| 3 | All 500 (server error)     | `500 Internal Server Error` for all   | 5–25†              | 0           | OPEN               |
-| 4 | Mix 404 and 200            | Alternating 404/200 per order          | 5                  | 2           | CLOSED              |
+| 1 | All success                | `200 OK` + `OrderDto` for each order   | 3                  | 0–3         | CLOSED              |
+| 2 | All 404 (expected)         | `404 Not Found` for each order         | 3 (no retry)       | 0           | CLOSED*             |
+| 3 | All 500 (server error)     | `500 Internal Server Error` for all   | 3–15†              | 0           | OPEN               |
+| 4 | Mix 404 and 200            | Mixed 404/200 per order                | 3                  | 0–3         | CLOSED              |
 | 5 | Circuit OPEN               | (after scenario 3)                     | 0 (fallback only)  | 0           | OPEN               |
 
 \* 404 may or may not be counted as failures depending on Circuit Breaker config; Retry ignores 404.  
-† See §4 on retry behavior; observed behavior may be 5 calls due to proxy/retry interaction.
+† 3 fetches × up to 5 retries each; circuit needs ≥5 failures to OPEN, so ≥2 `updateOrders()` runs.
 
 ### 2.2 Scenario Details
 
 #### Scenario 1: All Success
 
-- **Mock:** `when(restTemplate.getForEntity(...)).thenReturn(ResponseEntity.ok(orderDto))` for all 5 orders  
-- **Behavior:** 5 API calls, 5 events sent to Kafka  
-- **Validation:** `verify(restTemplate, times(5))`, `verify(orderEventSender, times(5))`
+- **Mock:** `when(restTemplate.getForEntity(...)).thenReturn(ResponseEntity.ok(orderDto))` for all 3 calls  
+- **Behavior:** 3 API calls per `updateOrders()`, 0–3 events depending on which random IDs (1–5) succeed  
+- **Validation:** `verify(restTemplate, times(3))`, `verify(orderEventSender, times(3))` when all 3 IDs are valid
 
 #### Scenario 2: All 404 (Expected)
 
 - **Mock:** `doThrow(HttpClientErrorException.create(HttpStatus.NOT_FOUND, ...))`  
-- **Behavior:** 1 API call per order (no retry for 404), 0 events  
-- **Validation:** `verify(restTemplate, times(5))`, `verify(orderEventSender, never())`
+- **Behavior:** 1 API call per fetch (no retry for 404), 0 events  
+- **Validation:** `verify(restTemplate, times(3))`, `verify(orderEventSender, never())`
 
 #### Scenario 3: All 500 (Server Error)
 
 - **Mock:** `doThrow(HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR))`  
-- **Behavior:** Retry up to 5 times per order; after retries exhausted, fallback returns `null`; Circuit Breaker records failures  
-- **Validation:** `verify(restTemplate, atLeast(5))`, `verify(orderEventSender, never())`
+- **Behavior:** Retry up to 5 times per fetch; after retries exhausted, fallback returns `null`; Circuit Breaker records failures. With 3 fetches per run, ≥2 runs needed to reach 5 failures (OPEN)  
+- **Validation:** `verify(restTemplate, atLeast(3))`, `verify(orderEventSender, never())`
 
-#### Scenario 4: Mix 404 and 200
+#### Scenario 4: Mix IDs 1–5 (success) vs 6–10 (404)
 
-- **Mock:** `thenThrow(notFound).thenReturn(ok).thenThrow(notFound).thenReturn(ok).thenThrow(notFound)`  
-- **Behavior:** 5 API calls, 2 events (only for successful orders)  
-- **Validation:** `verify(restTemplate, times(5))`, `verify(orderEventSender, times(2))`
+- **Mock:** `thenAnswer` returning 200 for order IDs 1–5, throwing 404 for 6–10  
+- **Behavior:** 3 API calls, 0–3 events depending on random IDs drawn  
+- **Validation:** `verify(restTemplate, times(3))`, `verify(orderEventSender, atLeast(0))`, `atMost(3)`
 
 #### Scenario 5: Circuit OPEN
 
 - **Precondition:** Scenario 3 executed (≥5 failures, circuit OPEN)  
 - **Mock:** Same 500 stub (not used when circuit is OPEN)  
 - **Behavior:** No API calls; fallback used immediately  
-- **Validation:** `clearInvocations(restTemplate)` before 6th `updateOrders()`, then `verify(restTemplate, never())`
+- **Validation:** `clearInvocations(restTemplate)` before next `updateOrders()`, then `verify(restTemplate, never())`
 
 ---
 
@@ -80,22 +81,23 @@ This report documents the OrderService resilience logic for retrieving orders fr
 ### 3.1 Conditions for OPEN
 
 - `minimumNumberOfCalls`: 5 (must have at least 5 evaluated calls)
-- `failureRateThreshold`: 20%  
-- **Example:** 5 calls, 5 failures → 100% > 20% → OPEN
+- `failureRateThreshold`: 50%  
+- **Example:** 5 calls, 5 failures → 100% > 50% → OPEN
 
 ### 3.2 Runtime Sequence
 
 ```
-1. updateOrders() × 1: fetchOrder(1)…fetchOrder(5)
+1. updateOrders() × 1: 3 iterations, each fetchOrder(random 1–10)
    - Each fetchOrder: 1 success or 1–5 attempts (depending on Retry)
-   - After 5 failures: circuit records failure rate and can OPEN
+   - minimumNumberOfCalls=5 → need ≥2 updateOrders() runs to evaluate circuit
+   - After ≥5 failures: circuit OPEN
 
-2. Next updateOrders(): if OPEN → all 5 fetchOrder calls use fallback, 0 API calls
+2. Next updateOrders(): if OPEN → all 3 fetchOrder calls use fallback, 0 API calls
 ```
 
 ### 3.3 Sliding Window
 
-- **slidingWindowSize:** 20 (last 20 calls)
+- **slidingWindowSize:** 100 (last 100 calls)
 - **Behavior:** Old successes/failures slide out; circuit re-evaluates when new calls are recorded
 
 ---
@@ -105,29 +107,28 @@ This report documents the OrderService resilience logic for retrieving orders fr
 ### 4.1 Order ID Availability
 
 - **PetStore API rules:** Order IDs ≤5 or >10 are valid; IDs 6–10 return 404.
-- **Current OrderService:** Uses fixed IDs `{1, 2, 3, 4, 5}` to avoid 404 (per code comment).
-- **Original design (README):** Orders "generated randomly as integers in the range of 1-10".
+- **Current OrderService:** Uses `ThreadLocalRandom.current().nextInt(1, 11)` — **3 iterations**, each with a random ID in range **1–10**.
 
-### 4.2 nextInt(1-10) Probability for Original Design
+### 4.2 nextInt(1, 11) Probability (Current Implementation)
 
-If order IDs were chosen with `Random().nextInt(10) + 1` (range 1–10):
+`ThreadLocalRandom.current().nextInt(1, 11)` yields values 1–10 (inclusive 1, exclusive 11):
 
 | Outcome      | IDs   | Count | P(per call) |
 |--------------|-------|-------|-------------|
 | 200 OK       | 1–5   | 5     | 50%         |
 | 404 Not Found| 6–10  | 5     | 50%         |
 
-- **Per `updateOrders()` (5 orders):** Expected 2.5 success, 2.5×404.
+- **Per `updateOrders()` (3 fetches):** Expected 1.5 success, 1.5×404.
 - **404 handling:** Retry does not retry (ignoreExceptions); 1 API call per 404 order.
-- **Circuit Breaker:** 404 is still recorded as a failure unless explicitly ignored in Circuit Breaker config. With 5 orders and 50% 404, expect ~2.5 failures per run; circuit would typically open after a few runs.
+- **Circuit Breaker:** 404 is still recorded as a failure unless explicitly ignored in Circuit Breaker config. With 3 fetches and 50% 404, expect ~1.5 failures per run; circuit needs ≥2 runs to reach 5 evaluated calls and can open after 2–3 runs if most calls fail.
 
 ### 4.3 Expected Runtime Behavior
 
 | Scenario                 | Approx. API load (per updateOrders) | Notes                          |
 |--------------------------|-------------------------------------|--------------------------------|
-| All IDs valid (1–5)      | 5 calls                             | No 404, normal flow             |
-| Mixed valid/404          | 5 calls                             | 404 no retry, 1 call per order  |
-| External 500 errors      | 5–25 calls                          | Depends on retry configuration  |
+| Random IDs (1–10)        | 3 calls                             | 3 fetches per run              |
+| Mixed valid/404          | 3 calls                             | 404 no retry, 1 call per fetch  |
+| External 500 errors      | 3–15 calls                          | 3 fetches × up to 5 retries    |
 | Circuit OPEN             | 0 calls                             | Fallback only                  |
 
 ---
@@ -136,15 +137,51 @@ If order IDs were chosen with `Random().nextInt(10) + 1` (range 1–10):
 
 | Test                             | Scenario | Assertions                                              |
 |----------------------------------|----------|---------------------------------------------------------|
-| `orderService_updateOrders_all_success_sends_events` | 1        | 5 API calls, 5 events                                  |
-| `orderService_updateOrders_404_no_retry_one_call_per_order` | 2        | 5 API calls, 0 events                                  |
-| `orderService_updateOrders_500_triggers_retry_then_fallback` | 3        | ≥5 API calls, 0 events                                 |
-| `orderService_updateOrders_circuit_open_no_api_calls` | 5        | 0 API calls after opening circuit                      |
-| `orderService_updateOrders_mix_404_and_success`      | 4        | 5 API calls, 2 events                                  |
+| `orderService_updateOrders_all_success_sends_events` | 1        | 3 API calls, events for successful fetches             |
+| `orderService_updateOrders_404_no_retry_one_call_per_fetch` | 2        | 3 API calls, 0 events                                  |
+| `orderService_updateOrders_500_triggers_retry_then_fallback` | 3        | ≥3 API calls, 0 events                                 |
+| `orderService_updateOrders_circuit_open_no_api_calls_after_threshold` | 5        | 0 API calls after opening circuit (2 runs = 6 failures) |
+| `orderService_updateOrders_mix_ids_1_to_5_success_6_to_10_404` | 4        | 3 API calls, 0–3 events (ID-based thenAnswer)          |
+| `orderService_updateOrders_minimum_calls_before_circuit_evaluates` | Edge    | ≥3 API calls, verifies retry/fallback before threshold  |
+| `orderService_updateOrders_response_body_null_returns_no_event` | fetchOrder return null | Stub `ResponseEntity.ok().build()`; covers null-body branch |
+
+*Note: Tests use `thenAnswer` with order ID from the request map to simulate PetStore behaviour (IDs 1–5 success, 6–10 404). Inventory stubs use `doReturn().when()` and `eq(INVENTORY_URL)` for reliable matching.*
 
 ---
 
-## 6. Recommendations
+## 6. Code Coverage Report (OrderService)
+
+Coverage from `mvn verify` (JaCoCo):
+
+| Metric       | Covered | Total | Coverage |
+|--------------|---------|-------|----------|
+| Instructions | 96      | 111   | **86%**  |
+| Branches     | 5       | 6     | **83%**  |
+| Lines        | 22      | 26    | **85%**  |
+| Methods      | 5       | 5     | **100%** |
+
+### Test Logic and Coverage Mapping
+
+| Test | Covers | Logic |
+|------|--------|-------|
+| `orderService_updateOrders_all_success_sends_events` | Success path | 3 iterations, all return 200+OrderDto; 3 events sent |
+| `orderService_updateOrders_404_no_retry_one_call_per_fetch` | 404 handling | Retry ignores 404; 3 API calls, 0 events; fallback returns null |
+| `orderService_updateOrders_500_triggers_retry_then_fallback` | 500 + fallback | Retries up to 5× per fetch; fallback invoked; 0 events |
+| `orderService_updateOrders_circuit_open_no_api_calls_after_threshold` | Circuit OPEN | 2 runs (6 failures) open circuit; 3rd run uses fallback, 0 API calls |
+| `orderService_updateOrders_mix_ids_1_to_5_success_6_to_10_404` | Mixed IDs | `thenAnswer` by order ID (1–5 OK, 6–10 404); 3 calls, 0–3 events |
+| `orderService_updateOrders_minimum_calls_before_circuit_evaluates` | Pre-threshold | Verifies retry/fallback before circuit opens |
+| `orderService_updateOrders_response_body_null_returns_no_event` | Null body branch | Stub `ResponseEntity.ok().build()`; fetchOrder returns null; 0 events |
+
+### Uncovered (defensive code)
+
+- **catch(NotFound)** in `updateOrders`: CircuitBreaker fallback handles 404 before propagation.
+- **catch(Exception)** in `updateOrders`: Fallback handles all exceptions; never propagates.
+
+Report path: `inventory-microservice/target/site/jacoco/mx.hdmsantander.opsdemo.inventory.service/OrderService.html`
+
+---
+
+## 7. Recommendations
 
 1. **404 and Circuit Breaker:**  
    If 404 should not contribute to opening the circuit, add `ignoreExceptions` for `HttpClientErrorException.NotFound` in the Circuit Breaker config.
@@ -152,5 +189,8 @@ If order IDs were chosen with `Random().nextInt(10) + 1` (range 1–10):
 2. **Retry vs. Circuit Breaker:**  
    Aspect order (Circuit Breaker=1, Retry=2) ensures Retry is inner and Circuit Breaker is outer, so retries occur before the circuit records a failure.
 
-3. **Observability:**  
+3. **Self-invocation:**  
+   `updateOrders()` must call `self.fetchOrder(orderId)` (via `@Lazy @Autowired OrderService self`) so Circuit Breaker and Retry apply; direct `fetchOrder()` calls bypass the AOP proxy.
+
+4. **Observability:**  
    Use Resilience4j metrics and events (and optionally Actuator) to monitor circuit state, retries, and fallbacks in production.
