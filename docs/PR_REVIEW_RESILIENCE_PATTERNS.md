@@ -2,7 +2,7 @@
 
 ## Summary
 
-Review of the `start.sh` script, tests, and Docker stack for best practices. Includes port validation and test verification.
+Review of the `start.sh` script, tests, and Docker stack for best practices. Includes port validation, test verification, and port assignments that avoid conflicts with infrastructure (e.g. landoop Schema Registry on 8081).
 
 ---
 
@@ -17,11 +17,13 @@ Review of the `start.sh` script, tests, and Docker stack for best practices. Inc
 
 | Port | Service |
 |------|---------|
-| 8081 | Inventory microservice |
-| 8082 | Query microservice |
+| 8085 | Inventory microservice |
+| 8086 | Query microservice |
 | 9092 | Kafka |
 | 9090 | Prometheus |
 | 9411 | Zipkin |
+
+*Note: Ports 8085/8086 were chosen to avoid conflict with `landoop/fast-data-dev` Schema Registry (8081), Kafka Connect (8083), and other common services.*
 
 ### 2. Test Summary & Coverage
 
@@ -38,28 +40,28 @@ Review of the `start.sh` script, tests, and Docker stack for best practices. Inc
 ### 4. Portable Port Detection
 
 - Uses `ss` on Linux, with fallback to `nc` or Bash `/dev/tcp`
-- Regex `:${port}[^0-9]` avoids false matches (e.g. 80810 vs 8081)
+- Regex `:${port}[^0-9]` avoids false matches (e.g. 80860 vs 8086)
+
+### 5. Docker Compose Consistency
+
+- `docker-compose.yml` and `docker-compose-minimal.yml` both use `version: '3.9'` for consistency
 
 ---
 
-## Potential Concerns
+## Resolved: landoop Port Conflict
 
-### 1. landoop/fast-data-dev Port Conflict
+Previously, inventory used port 8081, which conflicted with `landoop/fast-data-dev` Schema Registry. **Resolved** by moving microservices to 8085 (inventory) and 8086 (query).
 
-`landoop/fast-data-dev` exposes Schema Registry on **port 8081**, which is also used by the inventory microservice. With `network_mode: host`, both would contend for 8081.
+---
 
-**Recommendation**: Consider changing inventory to a different port (e.g. 8083) or configuring landoop to use another port for Schema Registry. If the stack runs successfully today, landoop may be configured differently.
+## Minor Notes
 
-### 2. GitHub Workflow vs start.sh
+### GitHub Workflow vs start.sh
 
 - **Workflow** (`.github/workflows/test.yml`): Uses `mvn test`
 - **start.sh --tests-only**: Uses `mvn verify` (tests + JaCoCo)
 
 Both run the same tests. `mvn verify` adds coverage; CI keeps `mvn test` for speed.
-
-### 3. docker-compose.yml Version
-
-`docker-compose.yml` has no `version` key; `docker-compose-minimal.yml` uses `version: '3.9'`. Compose v2 ignores `version`, but consistency can help.
 
 ---
 
@@ -68,9 +70,9 @@ Both run the same tests. `mvn verify` adds coverage; CI keeps `mvn test` for spe
 | Run | Result |
 |-----|--------|
 | `./start.sh --tests-only` | ✅ All tests passed, ports OK |
-| `mvn -B test -f query-microservice/pom.xml` | ✅ 20 tests, 0 failures |
-| `mvn -B test -f inventory-microservice/pom.xml` | ✅ 19 tests, 0 failures |
-| Port check with port 9092 in use | ✅ Correctly fails with clear error |
+| `mvn -B test -f query-microservice/pom.xml` | ✅ Pass |
+| `mvn -B test -f inventory-microservice/pom.xml` | ✅ Pass |
+| Port check with port in use | ✅ Correctly fails with clear error |
 
 ---
 
@@ -78,7 +80,7 @@ Both run the same tests. `mvn verify` adds coverage; CI keeps `mvn test` for spe
 
 ```
 --tests-only:
-  mvn verify (query) → mvn verify (inventory) → test summary → coverage summary → port check → exit
+  mvn verify (query) → mvn verify (inventory) → test summary → coverage summary → port check (8085, 8086, 9092, 9090, 9411) → exit
 
 minimal:
   port check (9092, 9090, 9411) → docker compose up
@@ -86,3 +88,19 @@ minimal:
 full:
   mvn package (tests) → port check (all 5 ports) → docker compose build → docker compose up
 ```
+
+---
+
+## Files Updated for Port Change
+
+| File | Change |
+|------|--------|
+| `inventory-microservice/.../application.yml` | `server.port: 8085` |
+| `query-microservice/.../application.yml` | `server.port: 8086` |
+| `query-microservice/.../InventoryService.java` | `http://localhost:8085/v1/inventory` |
+| `query-microservice/.../MainController.java` | OpenAPI description |
+| `query-microservice/Dockerfile` | Health check `localhost:8086` |
+| `inventory-microservice/Dockerfile` | Health check `localhost:8085` |
+| `prometheus/prometheus.yml` | Targets `8085`, `8086` |
+| `start.sh` | `PORTS_FULL="8085 8086 ..."` |
+| `README.md` | All port references updated |

@@ -1,5 +1,5 @@
 # Prometheus config (compatible with Prometheus 2.45+)
-# This assumes that your Prometheus instance can access this application on localhost:8081 and localhost:8082
+# This assumes that your Prometheus instance can access this application on localhost:8085 and localhost:8086
 
 global:
   scrape_interval: 15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
@@ -11,4 +11,4 @@ scrape_configs:
     metrics_path: '/actuator/prometheus'
     scrape_interval: 5s
     static_configs:
-      - targets: ['localhost:8081', 'localhost:8082']
+      - targets: ['localhost:8085', 'localhost:8086']

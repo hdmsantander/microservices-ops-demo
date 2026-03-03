@@ -18,7 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 public class InventoryService {
 
-	private static final String INVENTORY_SERVICE_URL = "http://localhost:8081/v1/inventory";
+	private static final String INVENTORY_SERVICE_URL = "http://localhost:8085/v1/inventory";
 
 	@Autowired
 	private RestTemplate restTemplate;

@@ -8,9 +8,9 @@ SKIP_TESTS=""
 MODE="full"
 TESTS_ONLY=""
 
-# Ports required by Docker stack (Kafka:9092, Prometheus:9090, Zipkin:9411, inventory:8081, query:8082)
+# Ports required by Docker stack (Kafka:9092, Prometheus:9090, Zipkin:9411, inventory:8085, query:8086)
 PORTS_MINIMAL="9092 9090 9411"
-PORTS_FULL="8081 8082 9092 9090 9411"
+PORTS_FULL="8085 8086 9092 9090 9411"
 
 is_port_in_use() {
     local port=$1
