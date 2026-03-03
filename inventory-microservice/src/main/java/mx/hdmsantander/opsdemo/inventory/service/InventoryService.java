@@ -2,16 +2,15 @@ package mx.hdmsantander.opsdemo.inventory.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import io.micrometer.core.annotation.Timed;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
@@ -35,8 +34,9 @@ public class InventoryService {
 	@Autowired
 	private Tracer tracer;
 
+	@CircuitBreaker(name = "inventoryService", fallbackMethod = "getInventoryFallback")
+	@Retry(name = "inventoryService")
 	@Timed(value = "inventory.query.time", description = "Time taken to get the inventory from the pet shop API")
-	@Retryable(retryFor = ResourceAccessException.class, maxAttempts = 3, backoff = @Backoff(delay = 500, multiplier = 2))
 	public JsonNode getInventory() {
 		log.info("Retrieving inventory from the inventory service of the pet shop at: " + INVENTORY_SERVICE_URL);
 		try {
@@ -52,8 +52,14 @@ public class InventoryService {
 			return inventory != null && !inventory.isMissingNode() ? inventory : objectMapper.createObjectNode();
 		} catch (Exception e) {
 			log.warn("Failed to retrieve inventory from petstore API: {}", e.getMessage());
-			return objectMapper.createObjectNode();
+			throw new RuntimeException(e);
 		}
+	}
+
+	@SuppressWarnings("unused")
+	private JsonNode getInventoryFallback(Exception e) {
+		log.warn("Circuit breaker fallback for getInventory: {}", e.getMessage());
+		return objectMapper.createObjectNode();
 	}
 
 	@Scheduled(fixedDelay = 20000)

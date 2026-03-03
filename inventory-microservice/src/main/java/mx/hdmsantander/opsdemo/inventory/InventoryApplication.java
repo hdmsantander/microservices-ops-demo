@@ -4,16 +4,15 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.persistence.autoconfigure.EntityScan;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @EntityScan("mx.hdmsantander.opsdemo.inventory.model")
 @ComponentScan(basePackages = "mx.hdmsantander.opsdemo.inventory")
-@EnableRetry
 @EnableScheduling
 @SpringBootApplication
 public class InventoryApplication {
 
+	@SuppressWarnings("null")
 	public static void main(String[] args) {
 		SpringApplication.run(InventoryApplication.class, args);
 	}

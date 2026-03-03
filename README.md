@@ -41,10 +41,10 @@ Or directly: `docker compose -f docker-compose-minimal.yml up`
 Then run the microservices locally:
 
 ```bash
-# Terminal 1 - Inventory microservice (port 8081)
+# Terminal 1 - Inventory microservice (port 8085)
 cd inventory-microservice && mvn spring-boot:run
 
-# Terminal 2 - Query microservice (port 8082)
+# Terminal 2 - Query microservice (port 8086)
 cd query-microservice && mvn spring-boot:run
 ```
 
@@ -57,8 +57,8 @@ flowchart TB
     end
 
     subgraph Microservices["Microservices"]
-        Query["Query Service<br/>:8082<br/>• GET /v1/pet<br/>• POST /v1/pet/:id/adopt<br/>• GET /v1/orders<br/>• GET /v1/inventory"]
-        Inventory["Inventory Service<br/>:8081<br/>• GET /v1/inventory<br/>• Scheduled order sync"]
+        Query["Query Service<br/>:8086<br/>• GET /v1/pet<br/>• POST /v1/pet/:id/adopt<br/>• GET /v1/orders<br/>• GET /v1/inventory"]
+        Inventory["Inventory Service<br/>:8085<br/>• GET /v1/inventory<br/>• Scheduled order sync"]
     end
 
     subgraph Kafka["Apache Kafka :9092"]
@@ -131,7 +131,7 @@ This microservice performs queries to the inventory microservice and the pet sho
 - `POST /v1/pet/{id}/adopt` This operation performs the "adoption" of a pet from the shop. It requires a valid ID from the pet shop and it triggers an adoption event, which is consumed by the inventory microservice, which then in turn emits an event.
 - `GET /v1/orders` This operation queries the service's database to get a list of all the orders currently registered in the system. The orders are created from events wich the inventory microservice emits.
 
-The Swagger page is accessible at [http://localhost:8082/swagger-ui.html](http://localhost:8082/swagger-ui.html)
+The Swagger page is accessible at [http://localhost:8086/swagger-ui.html](http://localhost:8086/swagger-ui.html)
 
 ## Inventory microservice
 
@@ -143,7 +143,7 @@ This microservice performs queries to the pet shop API. This service is used by 
 
 It also performs a scheduled query of the inventory of the pet shop API to "update" the inventory of the shop in the microservice ecosystem. The service performs a query of orders (generated randomly as integers in the range of 1-10) to the [orders endpoint](https://petstore.swagger.io/v2/store/order) of the pet shop API, triggering an event if the order exists, this event is consumed by the query microservice which in turn updates the entity in question in its database.
 
-The Swagger page is accessible at [http://localhost:8081/swagger-ui.html](http://localhost:8081/swagger-ui.html)
+The Swagger page is accessible at [http://localhost:8085/swagger-ui.html](http://localhost:8085/swagger-ui.html)
 
 ## Prometheus server
 
@@ -221,3 +221,31 @@ The query microservice performs a GET of the pet ID to the pet shop API, and if 
 ![Kafka server](.img/5.png)
 
 The stack uses `landoop/fast-data-dev`, which includes Kafka, Zookeeper, Schema Registry, and a Web UI. The Kafka Web UI for viewing topics and events is accessible at [http://localhost:3030](http://localhost:3030).
+
+## CI/CD and Code Coverage
+
+### GitHub Actions
+
+- **Run Tests** (`.github/workflows/test.yml`): Runs tests for both microservices on every pull request targeting `main`, `master`, or `develop`.
+- **Coverage Report** (`.github/workflows/coverage.yml`): Generates JaCoCo HTML coverage reports and publishes them to GitHub Pages. Trigger manually via **Actions → Coverage Report → Run workflow** (optionally select a branch).
+
+### Enabling GitHub Pages for Coverage Reports
+
+1. Go to **Settings → Pages** in the repository
+2. Under **Build and deployment**, set **Source** to **GitHub Actions**
+3. Run the "Coverage Report" workflow from the Actions tab
+4. Reports will be available at `https://<org>.github.io/<repo>/` (e.g. query-microservice and inventory-microservice links)
+
+### Local Coverage
+
+Run tests with coverage and generate the HTML report:
+
+```bash
+# Query microservice
+mvn verify -f query-microservice/pom.xml
+
+# Inventory microservice
+mvn verify -f inventory-microservice/pom.xml
+```
+
+Reports are written to `target/site/jacoco/index.html` in each microservice directory.

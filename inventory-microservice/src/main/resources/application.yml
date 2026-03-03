@@ -1,5 +1,5 @@
 server:
-  port: 8081
+  port: 8085
 
 spring:
   application:
@@ -40,11 +40,45 @@ spring:
           replication-factor: 1
           enable-observation: true
           consumer-properties:
-            "[value.deserializer]": org.springframework.kafka.support.serializer.JacksonJsonDeserializer
-            "[spring.json.trusted.packages]": "*"
-            "[spring.json.value.default.type]": mx.hdmsantander.opsdemo.inventory.event.AdoptionEvent
+            '[value.deserializer]': org.springframework.kafka.support.serializer.JacksonJsonDeserializer
+            '[spring.json.trusted.packages]': '*'
+            '[spring.json.value.default.type]': mx.hdmsantander.opsdemo.inventory.event.AdoptionEvent
           producer-properties:
-            "[value.serializer]": org.springframework.kafka.support.serializer.JacksonJsonSerializer
+            '[value.serializer]': org.springframework.kafka.support.serializer.JacksonJsonSerializer
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        failureRateThreshold: 50
+        slowCallRateThreshold: 100
+        slowCallDurationThreshold: 60s
+        permittedNumberOfCallsInHalfOpenState: 5
+        slidingWindowSize: 100
+        minimumNumberOfCalls: 5
+    instances:
+      inventoryService:
+        baseConfig: default
+      orderService:
+        baseConfig: default
+    aspect-order: 1
+  retry:
+    configs:
+      default:
+        maxAttempts: 5
+        waitDuration: 500ms
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+      orderService:
+        baseConfig: default
+        ignoreExceptions:
+          - 'org.springframework.web.client.HttpClientErrorException$NotFound'
+    instances:
+      inventoryService:
+        baseConfig: default
+      orderService:
+        baseConfig: orderService
+    aspect-order: 2
 
 management:
   metrics:

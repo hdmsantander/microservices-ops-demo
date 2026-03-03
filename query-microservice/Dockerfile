@@ -47,6 +47,6 @@ ENV SPRING_PROFILES_ACTIVE=development
 # Run the thin application jar (references extracted layers from classpath)
 ENTRYPOINT ["java", "-jar", "application.jar"]
 
-# Health check via Spring Boot Actuator (query service runs on 8082)
+# Health check via Spring Boot Actuator (query service runs on 8086)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
-    CMD wget -q --spider http://localhost:8082/actuator/health || exit 1
+    CMD wget -q --spider http://localhost:8086/actuator/health || exit 1

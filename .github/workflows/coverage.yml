@@ -1,0 +1,92 @@
+name: Coverage Report
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to run coverage for'
+        required: false
+        default: ''
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref }}
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Generate coverage - query-microservice
+        run: mvn -B verify -f query-microservice/pom.xml
+
+      - name: Generate coverage - inventory-microservice
+        run: mvn -B verify -f inventory-microservice/pom.xml
+
+      - name: Prepare coverage site
+        env:
+          BRANCH_NAME: ${{ github.ref_name }}
+        run: |
+          mkdir -p coverage-report/query-microservice
+          mkdir -p coverage-report/inventory-microservice
+          cp -r query-microservice/target/site/jacoco/* coverage-report/query-microservice/ || true
+          cp -r inventory-microservice/target/site/jacoco/* coverage-report/inventory-microservice/ || true
+          cat > coverage-report/index.html << EOF
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <title>Code Coverage Report</title>
+            <style>
+              body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+              h1 { color: #333; }
+              .service { margin: 1.5rem 0; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; }
+              .service a { color: #0969da; text-decoration: none; }
+              .service a:hover { text-decoration: underline; }
+              .meta { color: #656d76; font-size: 0.9rem; }
+            </style>
+          </head>
+          <body>
+            <h1>Code Coverage Report</h1>
+            <p class="meta">Generated from branch: ${BRANCH_NAME}</p>
+            <div class="service">
+              <h2><a href="query-microservice/index.html">query-microservice</a></h2>
+              <p>Query microservice code coverage</p>
+            </div>
+            <div class="service">
+              <h2><a href="inventory-microservice/index.html">inventory-microservice</a></h2>
+              <p>Inventory microservice code coverage</p>
+            </div>
+          </body>
+          </html>
+          EOF
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: coverage-report
+
+  deploy:
+    needs: coverage
+    runs-on: ubuntu-latest
+    if: success()
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

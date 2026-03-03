@@ -70,7 +70,7 @@ public class MainController {
 		return ResponseEntity.status(HttpStatus.OK).body(pet);
 	}
 
-	@Operation(summary = "Check inventory", description = "Retrieves inventory from the inventory microservice at http://localhost:8081/v1/inventory")
+	@Operation(summary = "Check inventory", description = "Retrieves inventory from the inventory microservice at http://localhost:8085/v1/inventory")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", description = "Successful operation"),
 			@ApiResponse(responseCode = "400", description = "Bad request"),

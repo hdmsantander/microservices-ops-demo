@@ -13,6 +13,7 @@ dependency-reduced-pom.xml
 buildNumber.properties
 .mvn/
 **/.mvn/
+!**/.mvn/wrapper/maven-wrapper.properties
 .mvn/timing.properties
 
 # Local Maven repository (never commit dependencies)
