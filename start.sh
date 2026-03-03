@@ -47,10 +47,33 @@ start_minimal() {
 }
 
 run_tests_only() {
-    echo "Running tests for microservices..."
-    (cd query-microservice && mvn -q test) && \
-    (cd inventory-microservice && mvn -q test) && \
-    echo "All tests passed!"
+    echo "Running tests and coverage for microservices..."
+    (cd query-microservice && mvn -q verify) && \
+    (cd inventory-microservice && mvn -q verify) && \
+    echo "" && \
+    echo "All tests passed!" && \
+    echo "" && \
+    echo "Coverage reports (HTML):" && \
+    echo "  query-microservice:      query-microservice/target/site/jacoco/index.html" && \
+    echo "  inventory-microservice: inventory-microservice/target/site/jacoco/index.html" && \
+    echo "" && \
+    (print_coverage_summary 2>/dev/null || true)
+}
+
+print_coverage_summary() {
+    for dir in query-microservice inventory-microservice; do
+        csv="${dir}/target/site/jacoco/jacoco.csv"
+        if [[ -f "$csv" ]]; then
+            sum=$(awk -F',' 'NR>1 {im+=$4; ic+=$5} END {print im+0, ic+0}' "$csv")
+            missed=$(echo "$sum" | cut -d' ' -f1)
+            covered=$(echo "$sum" | cut -d' ' -f2)
+            total=$((missed + covered))
+            if [[ $total -gt 0 ]]; then
+                pct=$(( (covered * 100) / total ))
+                echo "  ${dir}: ${covered}/${total} instructions (${pct}%)"
+            fi
+        fi
+    done
 }
 
 start_full() {
