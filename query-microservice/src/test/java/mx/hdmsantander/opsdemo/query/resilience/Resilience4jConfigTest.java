@@ -12,6 +12,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.test.context.ActiveProfiles;
 
+import io.github.resilience4j.core.functions.Either;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
@@ -75,25 +76,26 @@ class Resilience4jConfigTest {
 	}
 
 	@Test
-	void retry_petService_external_calls_has_5_attempts() {
+	void retry_petService_external_calls_has_5_attempts_and_exponential_backoff() {
 		Retry retry = retryRegistry.retry("petService");
 		RetryConfig config = retry.getRetryConfig();
 
 		assertThat(config.getMaxAttempts()).isEqualTo(5);
-		assertThat(config.getWaitDuration()).isEqualTo(Duration.ofMillis(500));
-		assertThat(config.isEnableExponentialBackoff()).isTrue();
-		assertThat(config.getExponentialBackoffMultiplier()).isEqualTo(2.0);
+		// waitDuration: 500ms, exponentialBackoffMultiplier: 2
+		var either = Either.<Throwable, Object>left(new RuntimeException("test"));
+		assertThat(config.getIntervalBiFunction().apply(1, either)).isEqualTo(500L);
+		assertThat(config.getIntervalBiFunction().apply(2, either)).isEqualTo(1000L);
 	}
 
 	@Test
-	void retry_inventoryService_internal_calls_has_2_attempts() {
+	void retry_inventoryService_internal_calls_has_2_attempts_and_exponential_backoff() {
 		Retry retry = retryRegistry.retry("inventoryService");
 		RetryConfig config = retry.getRetryConfig();
 
 		assertThat(config.getMaxAttempts()).isEqualTo(2);
-		assertThat(config.getWaitDuration()).isEqualTo(Duration.ofMillis(500));
-		assertThat(config.isEnableExponentialBackoff()).isTrue();
-		assertThat(config.getExponentialBackoffMultiplier()).isEqualTo(2.0);
+		var either = Either.<Throwable, Object>left(new RuntimeException("test"));
+		assertThat(config.getIntervalBiFunction().apply(1, either)).isEqualTo(500L);
+		assertThat(config.getIntervalBiFunction().apply(2, either)).isEqualTo(1000L);
 	}
 
 	@Test

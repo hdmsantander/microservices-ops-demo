@@ -2,6 +2,7 @@ package mx.hdmsantander.opsdemo.inventory.resilience;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.test.context.ActiveProfiles;
 
+import io.github.resilience4j.core.functions.Either;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
@@ -69,27 +71,29 @@ class Resilience4jConfigTest {
 	}
 
 	@Test
-	void retry_inventoryService_has_5_attempts() {
+	void retry_inventoryService_has_5_attempts_and_exponential_backoff() {
 		Retry retry = retryRegistry.retry("inventoryService");
 		RetryConfig config = retry.getRetryConfig();
 
 		assertThat(config.getMaxAttempts()).isEqualTo(5);
-		assertThat(config.getWaitDuration()).isEqualTo(Duration.ofMillis(500));
-		assertThat(config.isEnableExponentialBackoff()).isTrue();
-		assertThat(config.getExponentialBackoffMultiplier()).isEqualTo(2.0);
+		var either = Either.<Throwable, Object>left(new RuntimeException("test"));
+		assertThat(config.getIntervalBiFunction().apply(1, either)).isEqualTo(500L);
+		assertThat(config.getIntervalBiFunction().apply(2, either)).isEqualTo(1000L);
 	}
 
 	@Test
-	void retry_orderService_has_5_attempts_and_ignores_404() {
+	void retry_orderService_has_5_attempts_exponential_backoff_and_ignores_404() {
 		Retry retry = retryRegistry.retry("orderService");
 		RetryConfig config = retry.getRetryConfig();
 
 		assertThat(config.getMaxAttempts()).isEqualTo(5);
-		assertThat(config.getWaitDuration()).isEqualTo(Duration.ofMillis(500));
-		assertThat(config.isEnableExponentialBackoff()).isTrue();
-		assertThat(config.getExponentialBackoffMultiplier()).isEqualTo(2.0);
-		assertThat(config.getIgnoreExceptions())
-				.as("orderService retry should ignore 404 Not Found to avoid retrying missing orders")
-				.anyMatch(clazz -> clazz != null && clazz.getName().contains("NotFound"));
+		var either = Either.<Throwable, Object>left(new RuntimeException("test"));
+		assertThat(config.getIntervalBiFunction().apply(1, either)).isEqualTo(500L);
+		assertThat(config.getIntervalBiFunction().apply(2, either)).isEqualTo(1000L);
+		// 404 NotFound should not trigger retry (predicate returns false)
+		var notFound = org.springframework.web.client.HttpClientErrorException
+				.create(org.springframework.http.HttpStatus.NOT_FOUND, "Not Found",
+						org.springframework.http.HttpHeaders.EMPTY, new byte[0], StandardCharsets.UTF_8);
+		assertThat(config.getExceptionPredicate().test(notFound)).isFalse();
 	}
 }
