@@ -53,11 +53,43 @@ run_tests_only() {
     echo "" && \
     echo "All tests passed!" && \
     echo "" && \
+    echo "Test summary:" && \
+    (print_test_summary 2>/dev/null || true) && \
+    echo "" && \
     echo "Coverage reports (HTML):" && \
     echo "  query-microservice:      query-microservice/target/site/jacoco/index.html" && \
     echo "  inventory-microservice: inventory-microservice/target/site/jacoco/index.html" && \
     echo "" && \
     (print_coverage_summary 2>/dev/null || true)
+}
+
+print_test_summary() {
+    for dir in query-microservice inventory-microservice; do
+        report_dir="${dir}/target/surefire-reports"
+        if [[ ! -d "$report_dir" ]]; then
+            continue
+        fi
+        reports=("${report_dir}"/TEST-*.xml)
+        if [[ ! -e "${reports[0]}" ]]; then
+            continue
+        fi
+        awk -v d="${dir}" '
+            /<testsuite/ {
+                t = f = e = s = 0
+                if (match($0, /tests="[0-9]+/)) t = substr($0, RSTART+7, RLENGTH-7)+0
+                if (match($0, /failures="[0-9]+/)) f = substr($0, RSTART+10, RLENGTH-10)+0
+                if (match($0, /errors="[0-9]+/)) e = substr($0, RSTART+8, RLENGTH-8)+0
+                if (match($0, /skipped="[0-9]+/)) s = substr($0, RSTART+9, RLENGTH-9)+0
+                tests += t
+                failures += f
+                errors += e
+                skipped += s
+            }
+            END {
+                if (NR > 0) printf "  %s: Tests run: %d, Failures: %d, Errors: %d, Skipped: %d\n", d, tests, failures, errors, skipped
+            }
+        ' "${reports[@]}" 2>/dev/null
+    done
 }
 
 print_coverage_summary() {
