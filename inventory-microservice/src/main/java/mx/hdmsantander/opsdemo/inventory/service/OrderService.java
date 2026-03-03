@@ -2,6 +2,7 @@ package mx.hdmsantander.opsdemo.inventory.service;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -32,19 +33,14 @@ public class OrderService {
 	@Autowired
 	private MeterRegistry meterRegistry;
 
-	@Lazy
-	@Autowired
-	private OrderService self;
-
 	@Timed(value = "orders.query.time", description = "Time taken to query the pet shop API to refresh orders")
 	public void updateOrders() {
 		log.info("Updating orders using the pet shop API at: " + ORDER_SERVICE_BASE_URL);
 		// Petstore accepts order IDs <= 5 or > 10; use 1-5 to avoid 404
 		for (int i = 0; i < 3; i++) {
-			
 			int orderId = ThreadLocalRandom.current().nextInt(1, 11);
 			try {
-				self.fetchOrder(orderId);
+				fetchOrder(orderId);
 			} catch (org.springframework.web.client.HttpClientErrorException.NotFound e) {
 				log.debug("Order {} not found in petstore (expected for demo API)", orderId);
 			} catch (Exception e) {
