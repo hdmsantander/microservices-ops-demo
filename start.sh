@@ -8,6 +8,36 @@ SKIP_TESTS=""
 MODE="full"
 TESTS_ONLY=""
 
+# Ports required by Docker stack (Kafka:9092, Prometheus:9090, Zipkin:9411, inventory:8081, query:8082)
+PORTS_MINIMAL="9092 9090 9411"
+PORTS_FULL="8081 8082 9092 9090 9411"
+
+is_port_in_use() {
+    local port=$1
+    if command -v ss &>/dev/null; then
+        ss -tlnp 2>/dev/null | grep -qE ":${port}[^0-9]"
+    elif command -v nc &>/dev/null; then
+        nc -z 127.0.0.1 "$port" 2>/dev/null
+    else
+        (echo >/dev/tcp/127.0.0.1/"$port") 2>/dev/null
+    fi
+}
+
+check_ports_available() {
+    local ports="$1"
+    local in_use=""
+    for p in $ports; do
+        if is_port_in_use "$p"; then
+            in_use="${in_use}${in_use:+ }${p}"
+        fi
+    done
+    if [[ -n "$in_use" ]]; then
+        echo "ERROR: Port(s) already in use: $in_use"
+        echo "Stop any running services (e.g. docker compose down, previous run) before starting."
+        exit 1
+    fi
+}
+
 parse_args() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -42,6 +72,8 @@ parse_args() {
 }
 
 start_minimal() {
+    echo "Checking required ports are available..."
+    check_ports_available "$PORTS_MINIMAL"
     echo "Starting minimal infrastructure (Kafka, Zipkin, Prometheus)..."
     docker compose -f "$COMPOSE_MINIMAL" up
 }
@@ -60,7 +92,10 @@ run_tests_only() {
     echo "  query-microservice:      query-microservice/target/site/jacoco/index.html" && \
     echo "  inventory-microservice: inventory-microservice/target/site/jacoco/index.html" && \
     echo "" && \
-    (print_coverage_summary 2>/dev/null || true)
+    (print_coverage_summary 2>/dev/null || true) && \
+    echo "" && \
+    echo "Verifying ports are free after tests (no stray processes)..." && \
+    check_ports_available "$PORTS_FULL" && echo "Ports OK."
 }
 
 print_test_summary() {
@@ -112,7 +147,9 @@ start_full() {
     echo "Packaging microservices..."
     (cd query-microservice && mvn -q package ${SKIP_TESTS}) && \
     (cd inventory-microservice && mvn -q package ${SKIP_TESTS}) && \
-    echo "Success building sources! Starting full environment..." && \
+    echo "Success building sources! Checking required ports before Docker..." && \
+    check_ports_available "$PORTS_FULL" && \
+    echo "Starting full environment..." && \
     docker compose -f "$COMPOSE_FULL" build && \
     docker compose -f "$COMPOSE_FULL" up
 }
