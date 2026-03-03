@@ -56,6 +56,7 @@ public class InventoryService {
 		}
 	}
 
+	@SuppressWarnings("unused")
 	private JsonNode getInventoryFallback(Exception e) {
 		log.warn("Circuit breaker fallback for getInventory: {}", e.getMessage());
 		return objectMapper.createObjectNode();

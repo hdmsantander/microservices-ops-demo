@@ -12,6 +12,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication
 public class InventoryApplication {
 
+	@SuppressWarnings("null")
 	public static void main(String[] args) {
 		SpringApplication.run(InventoryApplication.class, args);
 	}

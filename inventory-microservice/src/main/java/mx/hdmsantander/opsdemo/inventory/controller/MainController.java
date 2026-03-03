@@ -28,6 +28,7 @@ public class MainController {
 	@Autowired
 	private InventoryService inventoryService;
 
+	@SuppressWarnings("null")
 	@Operation(summary = "Check inventory", description = "Retrieves inventory from the pet shop API at https://petstore.swagger.io/v2/store/inventory")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", description = "Successful operation"),

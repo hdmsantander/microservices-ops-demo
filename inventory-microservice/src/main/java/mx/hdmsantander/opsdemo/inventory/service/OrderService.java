@@ -73,6 +73,7 @@ public class OrderService {
 		return null;
 	}
 
+	@SuppressWarnings("unused")
 	private OrderDto fetchOrderFallback(int orderId, Exception e) {
 		log.warn("Circuit breaker fallback for fetchOrder {}: {}", orderId, e.getMessage());
 		return null;
