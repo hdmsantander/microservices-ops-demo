@@ -114,7 +114,7 @@ cd inventory-microservice && ./mvnw test
 ./mvnw verify
 ```
 
-See [docs/TESTING.md](docs/TESTING.md) for test categories, important tests, and gRPC testing notes. See [docs/IMPROVEMENT_REPORT.md](docs/IMPROVEMENT_REPORT.md) for future improvements and suggested technologies.
+See [docs/TESTING.md](docs/TESTING.md) for test categories and gRPC testing notes. See [docs/IMPROVEMENT_REPORT.md](docs/IMPROVEMENT_REPORT.md) for future improvements. See [docs/SCHEMA_REGISTRY_EUREKA_CONFIG_PROPOSAL.md](docs/SCHEMA_REGISTRY_EUREKA_CONFIG_PROPOSAL.md) for evaluation of Schema Registry, Eureka, and Spring Config Server.
 
 ## gRPC (Query ↔ Inventory)
 

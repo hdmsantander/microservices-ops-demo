@@ -71,7 +71,7 @@ This report reviews the microservices-ops-demo against best practices, identifie
 
 | Technology | Purpose | Integration Effort |
 |------------|---------|--------------------|
-| **Spring Cloud Config** | Centralized config (Redis URL, Kafka brokers, feature flags) | Medium – add config server module; bootstrap clients |
+| **Spring Cloud Config** | Centralized config (Redis URL, Kafka brokers, feature flags) | Medium – add config server module; use `spring.config.import`. See [SCHEMA_REGISTRY_EUREKA_CONFIG_PROPOSAL.md](SCHEMA_REGISTRY_EUREKA_CONFIG_PROPOSAL.md) |
 | **Testcontainers** | Real Redis/Kafka in integration tests | Low – already in deps; add `@Container` for Redis in ReservationService tests |
 | **WireMock** | Mock PetStore in tests; avoid external calls | Low – add standalone WireMock for `findByStatus`, etc. |
 | **Pact** | Contract testing for Query ↔ Inventory (gRPC or REST) | Medium – define pacts; verify consumer/provider |
