@@ -1,7 +1,6 @@
 package mx.hdmsantander.opsdemo.inventory.grpc;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -19,6 +18,8 @@ import mx.hdmsantander.opsdemo.inventory.v1.NotFound;
 import mx.hdmsantander.opsdemo.inventory.v1.Order;
 import mx.hdmsantander.opsdemo.inventory.v1.RefreshInventoryRequest;
 import mx.hdmsantander.opsdemo.inventory.v1.RefreshInventoryResponse;
+import net.devh.boot.grpc.server.service.GrpcService;
+import org.springframework.stereotype.Service;
 
 /**
  * gRPC server implementation for Query ↔ Inventory internal communication.
@@ -26,6 +27,7 @@ import mx.hdmsantander.opsdemo.inventory.v1.RefreshInventoryResponse;
  */
 @Slf4j
 @Service
+@GrpcService
 public class InventoryGrpcService extends InventoryServiceGrpc.InventoryServiceImplBase {
 
 	@Autowired
