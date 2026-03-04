@@ -334,7 +334,7 @@ In addition to Redis (required for reservations), the following technologies fit
 
 ### Grafana
 
-- Add Grafana service to docker-compose; Prometheus datasource at `http://localhost:9090` (host network).
+- Add Grafana service to docker-compose; Prometheus datasource at `http://localhost:9412` (host network).
 - Use pre-built dashboards: Spring Boot 2.1 Statistics, JVM (Micrometer), Kafka.
 
 ### Testcontainers

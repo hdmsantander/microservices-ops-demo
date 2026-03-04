@@ -8,9 +8,9 @@ SKIP_TESTS=""
 MODE="full"
 TESTS_ONLY=""
 
-# Ports required by Docker stack (Redis:6379, redis_exporter:9121, Kafka:9092, Prometheus:9090, Zipkin:9411, Grafana:3000, Admin:8089, inventory:8085/9090, query:8086)
-PORTS_MINIMAL="6379 9092 9090 9411 9121"
-PORTS_FULL="6379 8085 8086 8089 9090 9092 9411 9121 3000"
+# Ports required by Docker stack (Redis:6379, redis_exporter:9121, Kafka:9092, Prometheus:9412, Zipkin:9411, Grafana:3000, Admin:8089, inventory:8085/9090, query:8086)
+PORTS_MINIMAL="6379 9092 9411 9412 9121"
+PORTS_FULL="6379 8085 8086 8089 9090 9092 9411 9412 9121 3000"
 
 # Maven command: use wrapper (./mvnw) only in cloud env or when --mvnw; default mvn
 USE_MVNW="${USE_MVNW:-}"

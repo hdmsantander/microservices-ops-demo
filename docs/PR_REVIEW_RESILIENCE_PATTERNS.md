@@ -20,7 +20,7 @@ Review of the `start.sh` script, tests, and Docker stack for best practices. Inc
 | 8085 | Inventory microservice |
 | 8086 | Query microservice |
 | 9092 | Kafka |
-| 9090 | Prometheus |
+| 9412 | Prometheus |
 | 9411 | Zipkin |
 
 *Note: Ports 8085/8086 were chosen to avoid conflict with `landoop/fast-data-dev` Schema Registry (8081), Kafka Connect (8083), and other common services.*
@@ -80,10 +80,10 @@ Both run the same tests. `mvn verify` adds coverage; CI keeps `mvn test` for spe
 
 ```
 --tests-only:
-  mvn verify (query) → mvn verify (inventory) → test summary → coverage summary → port check (8085, 8086, 9092, 9090, 9411) → exit
+  mvn verify (query) → mvn verify (inventory) → test summary → coverage summary → port check (8085, 8086, 9092, 9090, 9411, 9412) → exit
 
 minimal:
-  port check (9092, 9090, 9411) → docker compose up
+  port check (9092, 9090, 9411, 9412) → docker compose up
 
 full:
   mvn package (tests) → port check (all 5 ports) → docker compose build → docker compose up

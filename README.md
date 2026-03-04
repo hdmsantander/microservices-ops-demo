@@ -71,7 +71,7 @@ flowchart TB
 
     subgraph Observability["Observability"]
         Zipkin["Zipkin<br/>:9411<br/>Tracing"]
-        Prometheus["Prometheus<br/>:9090<br/>Metrics"]
+        Prometheus["Prometheus<br/>:9412<br/>Metrics"]
     end
 
     PetStore <-->|HTTP| Query
@@ -163,7 +163,7 @@ The Swagger page is accessible at [http://localhost:8085/swagger-ui.html](http:/
 
 ![Prometheus service](.img/3.png)
 
-The Prometheus server is accessible at [http://localhost:9090](http://localhost:9090)
+The Prometheus server is accessible at [http://localhost:9412](http://localhost:9412)
 
 ### Example of metrics reported
 

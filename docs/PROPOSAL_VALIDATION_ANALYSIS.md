@@ -170,7 +170,7 @@ The following technologies fit the existing observability and resilience focus:
 ### 4.1 Grafana (Recommended)
 
 - **Why:** Prometheus scrapes metrics but has limited visualization. Grafana provides ready-made dashboards for JVM, Spring Boot, and Kafka.
-- **Add:** Grafana service in docker-compose, configurable datasource for Prometheus at `http://prometheus:9090` (or `localhost:9090` with host network).
+- **Add:** Grafana service in docker-compose, configurable datasource for Prometheus at `http://prometheus:9412` (or `localhost:9412` with host network).
 - **Pre-built:** Use `micrometer` or `spring boot` dashboards from Grafana marketplace.
 
 ### 4.2 Testcontainers

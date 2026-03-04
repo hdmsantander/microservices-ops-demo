@@ -44,7 +44,7 @@ This report reviews the microservices-ops-demo against best practices, identifie
 | **Redis single point of failure** | Reservations depend on Redis | Graceful degradation implemented; consider Redis Sentinel for prod |
 | **Kafka consumer lag** | Under load, consumers may lag | Monitor `consumer-lag` metrics; document scaling |
 | **gRPC vs REST toggle** | `inventory.grpc.enabled` must match deployment | Document in runbook; consider feature flag |
-| **Port conflicts** | 8085, 8086, 9090, 9092, etc. | `start.sh` checks ports; document full port list |
+| **Port conflicts** | 8085, 8086, 9090 (gRPC), 9092, 9412 (Prometheus), etc. | `start.sh` checks ports; document full port list |
 
 ### Medium Priority
 

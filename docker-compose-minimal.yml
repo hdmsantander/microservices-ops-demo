@@ -34,4 +34,5 @@ services:
       - ./prometheus/:/etc/prometheus/
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--web.listen-address=:9412'
     network_mode: host
