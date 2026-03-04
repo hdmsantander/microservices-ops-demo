@@ -197,4 +197,42 @@ class MainControllerTest {
 		mockMvc.perform(post("/v1/inventory/refresh").accept(MediaType.APPLICATION_JSON))
 				.andExpect(status().isOk());
 	}
+
+	@Test
+	void getOrderLive_returns200_whenFound() throws Exception {
+		JsonNode node = new ObjectMapper().createObjectNode().put("id", 1).put("petId", "1");
+		when(inventoryService.getOrderLive(1)).thenReturn(Optional.of(node));
+		mockMvc.perform(get("/v1/orders/1/live").accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isOk());
+	}
+
+	@Test
+	void getOrderLive_returns404_whenNotFound() throws Exception {
+		when(inventoryService.getOrderLive(999)).thenReturn(Optional.empty());
+		mockMvc.perform(get("/v1/orders/999/live").accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void getReservation_returns404_whenNotFound() throws Exception {
+		when(reservationService.getReservationStatus("r-unknown")).thenReturn(Optional.empty());
+		mockMvc.perform(get("/v1/reservations/r-unknown").accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void releaseReservation_returns404_whenInvalidToken() throws Exception {
+		when(reservationService.validateAndRelease("1", "bad-token")).thenReturn(false);
+		mockMvc.perform(delete("/v1/pets/1/reserve").header("X-Reservation-Token", "bad-token"))
+				.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void getPets_returnsOk_withTags() throws Exception {
+		List<Pet> pets = Collections.emptyList();
+		when(petService.getPets(eq(null), eq(PetStatus.AVAILABLE), any())).thenReturn(pets);
+		mockMvc.perform(get("/v1/pets").param("status", "AVAILABLE").param("tags", "fluffy,dog")
+				.accept(MediaType.APPLICATION_JSON))
+				.andExpect(status().isOk());
+	}
 }
