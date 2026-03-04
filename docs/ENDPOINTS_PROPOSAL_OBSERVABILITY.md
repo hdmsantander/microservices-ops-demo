@@ -6,6 +6,7 @@
 |---------|------|---------|
 | v4 | — | Original proposal |
 | v5 | 2025-03-04 | Port alignment (8085/8086), inventory refresh clarification, suggested technologies, validation fixes |
+| v5.1 | 2025-03-04 | List-all-pets option for GET /v1/pets; Testing Scope section (adoption process) |
 
 ---
 
@@ -50,18 +51,20 @@
 
 - Single endpoint: `GET /v1/pets`
 - When `id` is present: return single pet (or 404). PetStore call: `GET /pet/{id}`.
-- When `id` is absent: require `status`, optional `tags`. PetStore call: `GET /pet/findByStatus` (+ in-memory tags filter).
+- When `id` is absent: **list branch** — either `status` filter (optional) or list all.
+  - With `status`: PetStore call `GET /pet/findByStatus` (+ optional in-memory tags filter).
+  - Without `status`: List **all pets in the system** — call `findByStatus` for each of `AVAILABLE`, `PENDING`, `SOLD` and merge (deduplicate by id).
 
 **REST Summary:**
 
 | Request | Behavior |
 |---------|----------|
 | `GET /v1/pets?id=123` | Fetch pet by ID; returns 200 Pet or 404 |
+| `GET /v1/pets` | **List all pets** in the system; returns 200 List&lt;Pet&gt; (merged from PetStore findByStatus for each status) |
 | `GET /v1/pets?status=AVAILABLE` | List pets by status; returns 200 List&lt;Pet&gt; |
 | `GET /v1/pets?status=AVAILABLE&tags=tag1,tag2` | List pets by status, filtered by tags; returns 200 List&lt;Pet&gt; |
-| `GET /v1/pets` (no id, no status) | Invalid; 400 |
 
-**Controller logic:** If `id` param present → single-pet branch; else → list branch (requires `status`).
+**Controller logic:** If `id` param present → single-pet branch; else → list branch. For list: if `status` present → single findByStatus; else → list all (3 PetStore calls, merge).
 
 ---
 
@@ -74,10 +77,13 @@
 | Params | PetStore call | Post-processing |
 |--------|---------------|-----------------|
 | `id` only | `GET /pet/{id}` | None; return single pet |
+| None (list all) | `GET /pet/findByStatus?status=available` + `pending` + `sold` | Merge and deduplicate by id; return combined list |
 | `status` only | `GET /pet/findByStatus?status={status}` | None |
 | `status` + `tags` | `GET /pet/findByStatus?status={status}` | Filter result list: keep only pets whose `tags` contain ALL requested tag names (case-sensitive match on `Tag.name`) |
 | `id` + `status` | `id` takes precedence | Ignore `status`; treat as single-pet fetch |
 | `id` + `tags` | `id` takes precedence | Ignore `tags`; treat as single-pet fetch |
+
+**List-all-pets implementation:** PetStore v2 has no "list all" endpoint. To list all pets, call `findByStatus` for `available`, `pending`, and `sold`; merge results and deduplicate by pet id.
 
 **Rationale:** PetStore `findByTags` is deprecated. Use `findByStatus` as primary; apply tags filter in-memory to avoid deprecated API and keep semantics clear.
 
@@ -232,7 +238,7 @@ Configure interval via `reservation.cleanup-interval-seconds` (default 60). For 
 
 | Endpoint | Method | Description | REST Summary |
 |----------|--------|-------------|--------------|
-| **GET /v1/pets** | GET | List or get pets. Filters: `id` (optional, single pet), `status` (required when listing), `tags` (optional, comma-separated) | `GET /v1/pets?id=123` → 200 Pet or 404 <br/> `GET /v1/pets?status=AVAILABLE` → 200 List&lt;Pet&gt; <br/> `GET /v1/pets?status=AVAILABLE&tags=tag1,tag2` → 200 List&lt;Pet&gt; |
+| **GET /v1/pets** | GET | List or get pets. Filters: `id` (optional, single pet), `status` (optional when listing), `tags` (optional, comma-separated). No params lists all pets. | `GET /v1/pets` → 200 List&lt;Pet&gt; (all) <br/> `GET /v1/pets?id=123` → 200 Pet or 404 <br/> `GET /v1/pets?status=AVAILABLE` → 200 List&lt;Pet&gt; <br/> `GET /v1/pets?status=AVAILABLE&tags=tag1,tag2` → 200 List&lt;Pet&gt; |
 | **POST /v1/pets/{id}/reserve** | POST | Reserve pet for adoption. Returns reservation token and TTL. | `POST /v1/pets/{id}/reserve` → 201 `{ reservationId, petId, expiresAt }`, 409 if already reserved |
 | **POST /v1/pets/{id}/adopt** | POST | Adopt pet. **Requires** valid reservation token (header `X-Reservation-Token`). | `POST /v1/pets/{id}/adopt` + `X-Reservation-Token` → 200 Pet, 400 if no/invalid token, 409 if expired |
 | **DELETE /v1/pets/{id}/reserve** | DELETE | Release reservation early. Requires `X-Reservation-Token`. | `DELETE /v1/pets/{id}/reserve` + `X-Reservation-Token` → 204, 404 if invalid |
@@ -271,7 +277,7 @@ Configure interval via `reservation.cleanup-interval-seconds` (default 60). For 
 | Name | Service | Tags | When |
 |------|---------|------|------|
 | `pet.adoptions` | Query | (existing) | On successful adoption |
-| `pets.queried` | Query | `operation=list\|single`, `filter=tags` when tags used | On pet query |
+| `pets.queried` | Query | `operation=list\|single\|all`, `filter=tags` when tags used | On pet query |
 | `reservations.created` | Query | — | On POST reserve success |
 | `reservations.expired` | Query | — | On adopt/release when token was expired |
 | `reservations.released` | Query | — | On DELETE reserve or successful adopt |
@@ -343,7 +349,7 @@ In addition to Redis (required for reservations), the following technologies fit
 |-----------|---------|
 | `ReservationService` | Redis: SET NX EX, SADD/SREM on `reservations:active`; validate token; atomic adopt |
 | `ReservationCleanupJob` | `@Scheduled` every N seconds: SMEMBERS, EXISTS, SREM for expired keys |
-| `PetService.getPets(id?, status?, tags?)` | If id present → GET /pet/{id}; else GET findByStatus + in-memory tags filter |
+| `PetService.getPets(id?, status?, tags?)` | If id present → GET /pet/{id}; else if status present → GET findByStatus (+ tags filter); else → list all (3× findByStatus, merge) |
 | Configuration | Redis; `reservation.ttl-seconds`; `reservation.cleanup-interval-seconds` |
 
 **Reservation key design:**
@@ -381,7 +387,7 @@ In addition to Redis (required for reservations), the following technologies fit
 
 ### After (Reservation Flow + Filter-Based Pets)
 
-1. `GET /v1/pets?status=X` or `GET /v1/pets?id=123` or `GET /v1/pets?status=X&tags=tag1,tag2` — list or single pet via filters
+1. `GET /v1/pets` (all pets) or `GET /v1/pets?status=X` or `GET /v1/pets?id=123` or `GET /v1/pets?status=X&tags=tag1,tag2` — list or single pet via filters
 2. `POST /v1/pets/{id}/reserve` — reserve (hold) pet
 3. `POST /v1/pets/{id}/adopt` + `X-Reservation-Token` — adopt (requires valid reservation)
 4. Optional: `DELETE /v1/pets/{id}/reserve` — release early
@@ -428,7 +434,8 @@ In addition to Redis (required for reservations), the following technologies fit
 ```mermaid
 flowchart TB
     subgraph Client["Client"]
-        A1[GET /pets?status=AVAILABLE]
+        A1[GET /pets]
+        A1a[GET /pets?status=AVAILABLE]
         A1b[GET /pets?id=123]
         A2[POST /pets/1/reserve]
         A3[POST /pets/1/adopt + token]
@@ -459,6 +466,7 @@ flowchart TB
     end
 
     A1 --> QP
+    A1a --> QP
     A1b --> QP
     QP --> PS
 
@@ -529,6 +537,43 @@ sequenceDiagram
     I->>K: adoption-congratulation-events-v1
     Q-->>C: 200 Pet
 ```
+
+---
+
+## Testing Scope
+
+This section documents the testing scope for the adoption process and related flows, based on existing and proposed integration tests.
+
+### Adoption Process — Testing Scope
+
+| Test Type | Location | Scope | What is tested |
+|-----------|----------|-------|----------------|
+| **Controller (unit)** | `MainControllerTest.adoptPet_returnsOk` | Query controller | `POST /v1/pet/{id}/adopt` returns 200 when PetService returns a pet; verifies HTTP contract |
+| **Service (integration)** | `Resilience4jIntegrationTest.adoptPetById_returns_fallback_after_retries_exhausted` | Query PetService | Adoption fails gracefully when PetStore API returns 5xx; circuit breaker/retry fallback returns null |
+| **Event mapping (unit)** | `AdoptionEventTest.createFromPet_mapsPetToAdoptionEvent` | Query event | Pet → AdoptionEvent mapping (petId, name, dateOfAdoption) |
+| **Event flow (unit)** | `AdoptionEventProcessorConfigurationTest.adoptionEventProcessor_sendsCongratulationEvent` | Inventory event | AdoptionEvent → AdoptionCongratulationEvent; StreamBridge sends to `adoptionCongratulationOut` |
+| **Event model (unit)** | `AdoptionCongratulationEventTest` | Inventory event | AdoptionCongratulationEvent construction from AdoptionEvent |
+| **Tracing (integration)** | `TracingPropagationTest.trace_context_is_propagated_in_http_response` | Query HTTP | X-Zipkin-Trace-Id header present in responses; trace propagation |
+
+### Proposed Additions for Reservation Flow
+
+When the reservation flow is implemented, the following tests should be added:
+
+| Test | Scope |
+|------|-------|
+| Reserve → adopt with valid token | Full flow: POST reserve → POST adopt with X-Reservation-Token → 200 |
+| Adopt without token | POST adopt without header → 400 |
+| Adopt with invalid/expired token | POST adopt with bad token → 409 |
+| Reserve already-reserved pet | POST reserve on same pet twice → 409 on second |
+| Release reservation | POST reserve → DELETE reserve with token → 204 |
+| Resilience with Redis down | Graceful degradation: adopt without reservation (if implemented) |
+
+### Test Infrastructure
+
+- **Embedded Kafka**: `@EmbeddedKafka` for adoption event flow; no external Kafka required in tests.
+- **Mocked external calls**: RestTemplate mocked for PetStore and Inventory; AdoptionEventSender mocked in controller tests.
+- **Resilience4j**: Integration tests verify retry, circuit breaker, and rate limiter behavior with real bean wiring.
+- **Test profile**: `application-test.yml` disables scheduled tasks, uses HTTP for Zipkin (no Kafka transport).
 
 ---
 

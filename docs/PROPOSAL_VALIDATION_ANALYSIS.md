@@ -34,7 +34,7 @@ This document validates the Observability-First Endpoints Proposal (v4) against 
 | Endpoint                      | Proposal | Current | Gap / Change |
 |------------------------------|----------|---------|--------------|
 | `GET /v1/pet`                | —        | ✅ Exists (status required) | Rename to `/v1/pets`, add id/tags filters |
-| `GET /v1/pets`               | ✅       | —       | New; replaces `/pet` with filter-based design |
+| `GET /v1/pets`               | ✅       | —       | New; replaces `/pet`; supports list-all (no params), by status, by id |
 | `POST /v1/pet/{id}/adopt`    | —        | ✅ Exists | Keep; add reservation requirement |
 | `POST /v1/pets/{id}/reserve` | ✅       | —       | New; requires Redis |
 | `POST /v1/pets/{id}/adopt`   | ✅       | —       | Modify existing; require `X-Reservation-Token` |
