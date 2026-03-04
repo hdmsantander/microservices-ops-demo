@@ -12,6 +12,18 @@ TESTS_ONLY=""
 PORTS_MINIMAL="6379 9092 9090 9411 9121"
 PORTS_FULL="6379 8085 8086 8089 9092 9090 9411 9121 3000"
 
+# Maven command: use wrapper (./mvnw) only in cloud env or when --mvnw; default mvn
+USE_MVNW="${USE_MVNW:-}"
+[[ -n "${CURSOR_RUNTIME:-}" || -n "${CI:-}" || -n "${GITHUB_ACTIONS:-}" || -n "${GITPOD_WORKSPACE_URL:-}" ]] && USE_MVNW=1
+get_mvn() {
+    local dir="${1:-.}"
+    if [[ -n "$USE_MVNW" ]] && [[ -x "$dir/mvnw" ]]; then
+        echo "./mvnw"
+    else
+        echo "mvn"
+    fi
+}
+
 is_port_in_use() {
     local port=$1
     if command -v ss &>/dev/null; then
@@ -49,6 +61,10 @@ parse_args() {
                 TESTS_ONLY="1"
                 shift
                 ;;
+            --mvnw)
+                USE_MVNW=1
+                shift
+                ;;
             minimal|--minimal|-m)
                 MODE="minimal"
                 shift
@@ -59,12 +75,13 @@ parse_args() {
                 ;;
             *)
                 echo "Unknown option: $1"
-                echo "Usage: $0 [minimal|--minimal|-m] [full|--full|-f] [--skip-tests] [--tests-only]"
+                echo "Usage: $0 [minimal|--minimal|-m] [full|--full|-f] [--skip-tests] [--tests-only] [--mvnw]"
                 echo "  (no args)  Build and start full stack, run tests"
                 echo "  minimal   Start infrastructure only (Kafka + Zipkin + Prometheus)"
                 echo "  full      Build and start full stack (same as no args)"
                 echo "  --skip-tests  Skip tests when packaging microservices (full stack only)"
                 echo "  --tests-only  Run tests only for microservices (no Docker)"
+                echo "  --mvnw     Use Maven wrapper (./mvnw) instead of system mvn (auto in cloud: CI, CURSOR_RUNTIME)"
                 exit 1
                 ;;
         esac
@@ -79,9 +96,11 @@ start_minimal() {
 }
 
 run_tests_only() {
+    local mvn_q="$(get_mvn query-microservice)"
+    local mvn_i="$(get_mvn inventory-microservice)"
     echo "Running tests and coverage for microservices..."
-    (cd query-microservice && ./mvnw -q verify) && \
-    (cd inventory-microservice && ./mvnw -q verify) && \
+    (cd query-microservice && $mvn_q -q verify) && \
+    (cd inventory-microservice && $mvn_i -q verify) && \
     echo "" && \
     echo "All tests passed!" && \
     echo "" && \
@@ -144,10 +163,13 @@ print_coverage_summary() {
 }
 
 start_full() {
+    local mvn_q="$(get_mvn query-microservice)"
+    local mvn_i="$(get_mvn inventory-microservice)"
+    local mvn_a="$(get_mvn admin-server)"
     echo "Packaging microservices..."
-    (cd query-microservice && ./mvnw -q package ${SKIP_TESTS}) && \
-    (cd inventory-microservice && ./mvnw -q package ${SKIP_TESTS}) && \
-    (cd admin-server && ./mvnw -q package -DskipTests) && \
+    (cd query-microservice && $mvn_q -q package ${SKIP_TESTS}) && \
+    (cd inventory-microservice && $mvn_i -q package ${SKIP_TESTS}) && \
+    (cd admin-server && $mvn_a -q package -DskipTests) && \
     echo "Success building sources! Checking required ports before Docker..." && \
     check_ports_available "$PORTS_FULL" && \
     echo "Starting full environment..." && \
@@ -170,7 +192,7 @@ case "$MODE" in
         start_full
         ;;
     *)
-        echo "Usage: $0 [minimal|--minimal|-m] [full|--full|-f] [--skip-tests] [--tests-only]"
+        echo "Usage: $0 [minimal|--minimal|-m] [full|--full|-f] [--skip-tests] [--tests-only] [--mvnw]"
         echo "  (no args)  Build and start full stack, run tests"
         echo "  minimal   Start infrastructure only (Kafka + Zipkin + Prometheus)"
         echo "  full      Build and start full stack (same as no args)"
