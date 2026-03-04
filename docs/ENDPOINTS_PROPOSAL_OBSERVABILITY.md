@@ -7,6 +7,7 @@
 | v4 | — | Original proposal |
 | v5 | 2025-03-04 | Port alignment (8085/8086), inventory refresh clarification, suggested technologies, validation fixes |
 | v5.1 | 2025-03-04 | List-all-pets option for GET /v1/pets; Testing Scope section (adoption process) |
+| v5.2 | 2025-03-04 | gRPC for Query ↔ Inventory sync (GetInventory, GetOrder, Refresh); see [GRPC_IMPLEMENTATION.md](GRPC_IMPLEMENTATION.md) |
 
 ---
 

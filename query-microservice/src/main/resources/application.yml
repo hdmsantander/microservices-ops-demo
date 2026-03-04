@@ -140,3 +140,13 @@ reservation:
 
 inventory:
   service-url: http://localhost:8085
+  # gRPC for Query → Inventory internal sync (primary)
+  grpc:
+    enabled: true
+
+# gRPC client for Inventory service (used when inventory.grpc.enabled=true)
+grpc:
+  client:
+    inventory:
+      address: static://localhost:9090
+      negotiationType: PLAINTEXT

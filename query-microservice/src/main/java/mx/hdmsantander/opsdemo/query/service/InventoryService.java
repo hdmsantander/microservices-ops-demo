@@ -16,6 +16,7 @@ import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.github.resilience4j.retry.annotation.Retry;
 import io.micrometer.core.annotation.Timed;
 import lombok.extern.slf4j.Slf4j;
+import mx.hdmsantander.opsdemo.query.grpc.InventoryGrpcClient;
 
 @Slf4j
 @Service
@@ -24,17 +25,31 @@ public class InventoryService {
 	@Value("${inventory.service-url:http://localhost:8085}")
 	private String inventoryBaseUrl;
 
+	@Value("${inventory.grpc.enabled:false}")
+	private boolean grpcEnabled;
+
 	@Autowired
 	private RestTemplate restTemplate;
 
 	@Autowired
 	private ObjectMapper objectMapper;
 
+	@Autowired(required = false)
+	private InventoryGrpcClient inventoryGrpcClient;
+
 	@CircuitBreaker(name = "inventoryService", fallbackMethod = "getInventoryFallback")
 	@RateLimiter(name = "inventoryService")
 	@Retry(name = "inventoryService")
 	@Timed(value = "inventory.query.time", description = "Time taken to get the inventory from the inventory service")
 	public JsonNode getInventory(String status, Integer lowStockThreshold) {
+		if (grpcEnabled && inventoryGrpcClient != null) {
+			log.info("Retrieving inventory via gRPC from inventory microservice");
+			return inventoryGrpcClient.getInventory(status, lowStockThreshold);
+		}
+		return getInventoryRest(status, lowStockThreshold);
+	}
+
+	private JsonNode getInventoryRest(String status, Integer lowStockThreshold) {
 		String url = inventoryBaseUrl + "/v1/inventory";
 		if (status != null || lowStockThreshold != null) {
 			url += "?";
@@ -75,6 +90,14 @@ public class InventoryService {
 	@Retry(name = "inventoryService")
 	@Timed(value = "orders.live.query.time", description = "Time to get live order from Inventory")
 	public Optional<JsonNode> getOrderLive(Integer orderId) {
+		if (grpcEnabled && inventoryGrpcClient != null) {
+			log.info("Fetching live order {} from Inventory via gRPC", orderId);
+			return inventoryGrpcClient.getOrderLive(orderId);
+		}
+		return getOrderLiveRest(orderId);
+	}
+
+	private Optional<JsonNode> getOrderLiveRest(Integer orderId) {
 		String url = inventoryBaseUrl + "/v1/order/" + orderId;
 		log.info("Fetching live order {} from Inventory at: {}", orderId, url);
 		try {
@@ -96,6 +119,14 @@ public class InventoryService {
 	@CircuitBreaker(name = "inventoryService", fallbackMethod = "refreshFallback")
 	@Retry(name = "inventoryService")
 	public JsonNode refresh() {
+		if (grpcEnabled && inventoryGrpcClient != null) {
+			log.info("Triggering inventory refresh via gRPC");
+			return inventoryGrpcClient.refresh();
+		}
+		return refreshRest();
+	}
+
+	private JsonNode refreshRest() {
 		String url = inventoryBaseUrl + "/v1/inventory/refresh";
 		log.info("Triggering inventory refresh at: {}", url);
 		try {

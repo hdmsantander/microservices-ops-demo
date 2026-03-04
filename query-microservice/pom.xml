@@ -130,6 +130,16 @@
 			<version>4.0.1</version>
 		</dependency>
 		<dependency>
+			<groupId>mx.hdmsantander.opsdemo</groupId>
+			<artifactId>inventory-grpc-api</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>net.devh</groupId>
+			<artifactId>grpc-client-spring-boot-starter</artifactId>
+			<version>3.1.0.RELEASE</version>
+		</dependency>
+		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 			<optional>true</optional>

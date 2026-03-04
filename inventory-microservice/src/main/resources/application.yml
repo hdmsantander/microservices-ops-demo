@@ -1,6 +1,11 @@
 server:
   port: 8085
 
+# gRPC server for Query ↔ Inventory internal sync (GetInventory, GetOrder, RefreshInventory)
+grpc:
+  server:
+    port: 9090
+
 spring:
   application:
     name: inventory-microservice

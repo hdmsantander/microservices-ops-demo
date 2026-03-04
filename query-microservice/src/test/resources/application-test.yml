@@ -15,6 +15,11 @@ spring:
       client:
         enabled: false
 
+# Use REST for Inventory in tests (gRPC client not available in unit/integration tests)
+inventory:
+  grpc:
+    enabled: false
+
 management:
   tracing:
     export:
