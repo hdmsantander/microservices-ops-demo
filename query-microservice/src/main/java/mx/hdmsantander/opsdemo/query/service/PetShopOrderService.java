@@ -1,6 +1,7 @@
 package mx.hdmsantander.opsdemo.query.service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.StreamSupport;
 
 import jakarta.annotation.PostConstruct;
@@ -38,5 +39,9 @@ public class PetShopOrderService {
 
 	public List<PetShopOrder> getAllOrders() {
 		return StreamSupport.stream(petShopOrderRepository.findAll(Sort.unsorted()).spliterator(), false).toList();
+	}
+
+	public Optional<PetShopOrder> getOrderById(Integer orderId) {
+		return petShopOrderRepository.findById(orderId);
 	}
 }

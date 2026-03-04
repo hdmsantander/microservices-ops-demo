@@ -2,6 +2,7 @@ package mx.hdmsantander.opsdemo.inventory.service;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -77,5 +78,20 @@ public class OrderService {
 	private OrderDto fetchOrderFallback(int orderId, Exception e) {
 		log.warn("Circuit breaker fallback for fetchOrder {}: {}", orderId, e.getMessage());
 		return null;
+	}
+
+	@CircuitBreaker(name = "orderService", fallbackMethod = "getOrderByIdFallback")
+	@Retry(name = "orderService")
+	@Timed(value = "orders.get.time", description = "Time to get order by ID from PetStore")
+	public Optional<OrderDto> getOrderById(int orderId) {
+		meterRegistry.counter("orders.queries").increment();
+		OrderDto dto = fetchOrder(orderId);
+		return Optional.ofNullable(dto);
+	}
+
+	@SuppressWarnings("unused")
+	private Optional<OrderDto> getOrderByIdFallback(int orderId, Exception e) {
+		log.warn("Circuit breaker fallback for getOrderById {}: {}", orderId, e.getMessage());
+		return Optional.empty();
 	}
 }

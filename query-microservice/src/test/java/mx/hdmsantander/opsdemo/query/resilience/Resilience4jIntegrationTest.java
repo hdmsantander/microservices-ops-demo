@@ -35,6 +35,7 @@ import mx.hdmsantander.opsdemo.query.model.Pet;
 import mx.hdmsantander.opsdemo.query.model.enums.PetStatus;
 import mx.hdmsantander.opsdemo.query.service.InventoryService;
 import mx.hdmsantander.opsdemo.query.service.PetService;
+import mx.hdmsantander.opsdemo.query.service.ReservationService;
 
 /**
  * Integration tests verifying resilience4j behaviour: retry, circuit breaker,
@@ -62,6 +63,9 @@ class Resilience4jIntegrationTest {
 	@MockitoBean
 	private AdoptionEventSender adoptionEventSender;
 
+	@MockitoBean
+	private ReservationService reservationService;
+
 	// --- PetService (external: 5 retries, circuit breaker) ---
 
 	@Test
@@ -71,10 +75,13 @@ class Resilience4jIntegrationTest {
 		when(restTemplate.getForEntity(any(String.class), eq(Pet[].class), any(Map.class)))
 				.thenReturn(ResponseEntity.ok(pets));
 
-		var result = petService.getPetListByStatus(PetStatus.AVAILABLE);
+		var result = petService.getPets(null, PetStatus.AVAILABLE, null);
 
-		assertThat(result).hasSize(1);
-		assertThat(result.get(0).getName()).isEqualTo("Fluffy");
+		assertThat(result).isInstanceOf(java.util.List.class);
+		@SuppressWarnings("unchecked")
+		var list = (java.util.List<Pet>) result;
+		assertThat(list).hasSize(1);
+		assertThat(list.get(0).getName()).isEqualTo("Fluffy");
 		verify(restTemplate).getForEntity(any(String.class), eq(Pet[].class), any(Map.class));
 	}
 
@@ -84,9 +91,12 @@ class Resilience4jIntegrationTest {
 		doThrow(new HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR))
 				.when(restTemplate).getForEntity(any(String.class), eq(Pet[].class), any(Map.class));
 
-		var result = petService.getPetListByStatus(PetStatus.AVAILABLE);
+		var result = petService.getPets(null, PetStatus.AVAILABLE, null);
 
-		assertThat(result).isEmpty();
+		assertThat(result).isInstanceOf(java.util.List.class);
+		@SuppressWarnings("unchecked")
+		var list = (java.util.List<Pet>) result;
+		assertThat(list).isEmpty();
 		verify(restTemplate, atLeast(1)).getForEntity(any(String.class), eq(Pet[].class), any(Map.class));
 	}
 
@@ -97,21 +107,24 @@ class Resilience4jIntegrationTest {
 				.when(restTemplate).getForEntity(any(String.class), eq(Pet[].class), any(Map.class));
 
 		for (int i = 0; i < 5; i++) {
-			petService.getPetListByStatus(PetStatus.AVAILABLE);
+			petService.getPets(null, PetStatus.AVAILABLE, null);
 		}
 
-		// Circuit open: next call returns fallback without additional HTTP calls
-		var result = petService.getPetListByStatus(PetStatus.AVAILABLE);
-		assertThat(result).isEmpty();
+		var result = petService.getPets(null, PetStatus.AVAILABLE, null);
+		assertThat(result).isInstanceOf(java.util.List.class);
+		@SuppressWarnings("unchecked")
+		var list = (java.util.List<Pet>) result;
+		assertThat(list).isEmpty();
 	}
 
 	@Test
 	@Order(1)
 	void adoptPetById_returns_fallback_after_retries_exhausted() {
+		when(reservationService.isRedisAvailable()).thenReturn(false);
 		doThrow(new HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR))
 				.when(restTemplate).getForEntity(any(String.class), eq(Pet.class), any(Map.class));
 
-		var result = petService.adoptPetById("1");
+		var result = petService.adoptPetById("1", null);
 
 		assertThat(result).isNull();
 		verify(restTemplate, atLeast(1)).getForEntity(any(String.class), eq(Pet.class), any(Map.class));
@@ -126,7 +139,7 @@ class Resilience4jIntegrationTest {
 		when(restTemplate.getForEntity(any(String.class), eq(String.class)))
 				.thenReturn(ResponseEntity.ok(objectMapper.writeValueAsString(inventory)));
 
-		JsonNode result = inventoryService.getInventory();
+		JsonNode result = inventoryService.getInventory(null, null);
 
 		assertThat(result).isNotNull();
 		assertThat(result.get("available").asInt()).isEqualTo(10);
@@ -139,7 +152,7 @@ class Resilience4jIntegrationTest {
 		doThrow(new HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR))
 				.when(restTemplate).getForEntity(any(String.class), eq(String.class));
 
-		JsonNode result = inventoryService.getInventory();
+		JsonNode result = inventoryService.getInventory(null, null);
 
 		assertThat(result.isObject()).isTrue();
 		assertThat(result.isEmpty()).isTrue();
@@ -154,7 +167,7 @@ class Resilience4jIntegrationTest {
 				.thenReturn(ResponseEntity.ok(objectMapper.writeValueAsString(inventory)));
 
 		for (int i = 0; i < 3; i++) {
-			JsonNode result = inventoryService.getInventory();
+			JsonNode result = inventoryService.getInventory(null, null);
 			assertThat(result.get("available").asInt()).isEqualTo(0);
 		}
 		verify(restTemplate, times(3)).getForEntity(any(String.class), eq(String.class));

@@ -1,5 +1,17 @@
 version: '3.9'
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: redis-demo
+    network_mode: host
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.55.0
+    container_name: redis-exporter-demo
+    environment:
+      REDIS_ADDR: "localhost:6379"
+    network_mode: host
+    depends_on:
+      - redis
   kafka:
     image: landoop/fast-data-dev
     container_name: kafka-demo

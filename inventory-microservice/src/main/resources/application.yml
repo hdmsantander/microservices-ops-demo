@@ -21,6 +21,13 @@ spring:
     console:
       enabled: true
 
+  boot:
+    admin:
+      client:
+        url: http://localhost:8089
+        instance:
+          service-url: http://localhost:8085
+
   cloud:
     function:
       definition: adoptionEventProcessor

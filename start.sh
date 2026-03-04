@@ -8,9 +8,9 @@ SKIP_TESTS=""
 MODE="full"
 TESTS_ONLY=""
 
-# Ports required by Docker stack (Kafka:9092, Prometheus:9090, Zipkin:9411, inventory:8085, query:8086)
-PORTS_MINIMAL="9092 9090 9411"
-PORTS_FULL="8085 8086 9092 9090 9411"
+# Ports required by Docker stack (Redis:6379, redis_exporter:9121, Kafka:9092, Prometheus:9090, Zipkin:9411, Grafana:3000, Admin:8089, inventory:8085, query:8086)
+PORTS_MINIMAL="6379 9092 9090 9411 9121"
+PORTS_FULL="6379 8085 8086 8089 9092 9090 9411 9121 3000"
 
 is_port_in_use() {
     local port=$1
@@ -74,14 +74,14 @@ parse_args() {
 start_minimal() {
     echo "Checking required ports are available..."
     check_ports_available "$PORTS_MINIMAL"
-    echo "Starting minimal infrastructure (Kafka, Zipkin, Prometheus)..."
+    echo "Starting minimal infrastructure (Redis, Kafka, Zipkin, Prometheus, redis_exporter)..."
     docker compose -f "$COMPOSE_MINIMAL" up
 }
 
 run_tests_only() {
     echo "Running tests and coverage for microservices..."
-    (cd query-microservice && mvn -q verify) && \
-    (cd inventory-microservice && mvn -q verify) && \
+    (cd query-microservice && ./mvnw -q verify) && \
+    (cd inventory-microservice && ./mvnw -q verify) && \
     echo "" && \
     echo "All tests passed!" && \
     echo "" && \
@@ -145,8 +145,9 @@ print_coverage_summary() {
 
 start_full() {
     echo "Packaging microservices..."
-    (cd query-microservice && mvn -q package ${SKIP_TESTS}) && \
-    (cd inventory-microservice && mvn -q package ${SKIP_TESTS}) && \
+    (cd query-microservice && ./mvnw -q package ${SKIP_TESTS}) && \
+    (cd inventory-microservice && ./mvnw -q package ${SKIP_TESTS}) && \
+    (cd admin-server && ./mvnw -q package -DskipTests) && \
     echo "Success building sources! Checking required ports before Docker..." && \
     check_ports_available "$PORTS_FULL" && \
     echo "Starting full environment..." && \

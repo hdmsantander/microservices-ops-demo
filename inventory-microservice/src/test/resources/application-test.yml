@@ -1,5 +1,9 @@
 # Use HTTP for Zipkin in tests (Kafka client disabled; no Kafka required)
 spring:
+  boot:
+    admin:
+      client:
+        enabled: false
   task:
     scheduling:
       enabled: false

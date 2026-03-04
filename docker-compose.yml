@@ -1,5 +1,24 @@
 version: '3.9'
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: redis-demo
+    network_mode: host
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.55.0
+    container_name: redis-exporter-demo
+    environment:
+      REDIS_ADDR: "localhost:6379"
+    network_mode: host
+    depends_on:
+      redis:
+        condition: service_healthy
   zipkin:
     image: openzipkin/zipkin
     container_name: zipkin-demo
@@ -7,7 +26,14 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: localhost:9092
     network_mode: host
     depends_on:
-      - kafka
+      kafka:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9411/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
   prometheus:
     image: prom/prometheus:v2.55.0
     container_name: prometheus-demo
@@ -16,6 +42,35 @@ services:
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
     network_mode: host
+    depends_on:
+      - redis-exporter
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+  grafana:
+    image: grafana/grafana:11.0.0
+    container_name: grafana-demo
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_HTTP_PORT: 3000
+      GF_INSTALL_PLUGINS: "grafana-piechart-panel"
+    volumes:
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
+    network_mode: host
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
   kafka:
     image: landoop/fast-data-dev
     container_name: kafka-demo
@@ -23,6 +78,29 @@ services:
       ADV_HOST: 127.0.0.1
       RUNTESTS: 0
     network_mode: host
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list 2>/dev/null || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+  admin-server:
+    build:
+      context: ./admin-server
+      dockerfile: Dockerfile
+    container_name: admin-server-demo
+    environment:
+      SERVER_PORT: 8089
+    network_mode: host
+    depends_on:
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8089/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
   query-microservice:
     build:
       context: ./query-microservice
@@ -30,9 +108,20 @@ services:
     container_name: query-microservice-demo
     network_mode: host
     depends_on:
-      - kafka
-      - prometheus
-      - zipkin
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+      zipkin:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8086/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
   inventory-microservice:
     build:
       context: ./inventory-microservice
@@ -40,6 +129,15 @@ services:
     container_name: inventory-microservice-demo
     network_mode: host
     depends_on:
-      - kafka
-      - prometheus
-      - zipkin
+      kafka:
+        condition: service_healthy
+      prometheus:
+        condition: service_healthy
+      zipkin:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8085/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s

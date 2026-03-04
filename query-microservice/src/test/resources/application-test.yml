@@ -1,4 +1,20 @@
 # Use HTTP for Zipkin in tests (Kafka client disabled; no Kafka required)
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+  data:
+    redis:
+      repositories:
+        enabled: false
+  task:
+    scheduling:
+      enabled: false
+  boot:
+    admin:
+      client:
+        enabled: false
+
 management:
   tracing:
     export:
