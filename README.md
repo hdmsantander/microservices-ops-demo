@@ -2,7 +2,7 @@
 
 This repository holds a Spring Boot OPS demo with the following components:
 
-- Two microservices (Spring Boot 4.0.3) that perform requests to the [Swagger's PetStore](https://petstore.swagger.io/) and communicate with each other using HTTP and [Spring for Apache Kafka](https://spring.io/projects/spring-kafka).
+- Two microservices (Spring Boot 4.0.3) that perform requests to the [Swagger's PetStore](https://petstore.swagger.io/) and communicate with each other using **gRPC** (primary) or HTTP and [Spring for Apache Kafka](https://spring.io/projects/spring-kafka).
 - A Zipkin server that receives traces from the microservices via [Micrometer Tracing](https://micrometer.io/docs/tracing) (Brave).
 - A Prometheus server that scrapes metrics from [Spring Boot Actuator](https://docs.spring.io/spring-boot/docs/current/reference/html/actuator.html).
 - A Kafka cluster (landoop/fast-data-dev) for event-driven communication between the microservices and the tracer, including a Web UI.
@@ -57,8 +57,8 @@ flowchart TB
     end
 
     subgraph Microservices["Microservices"]
-        Query["Query Service<br/>:8086<br/>• GET /v1/pet<br/>• POST /v1/pet/:id/adopt<br/>• GET /v1/orders<br/>• GET /v1/inventory"]
-        Inventory["Inventory Service<br/>:8085<br/>• GET /v1/inventory<br/>• Scheduled order sync"]
+        Query["Query Service<br/>:8086<br/>• GET /v1/pets<br/>• POST /v1/pets/:id/reserve<br/>• POST /v1/pets/:id/adopt<br/>• GET /v1/orders<br/>• GET /v1/inventory"]
+        Inventory["Inventory Service<br/>:8085, :9090<br/>• GET /v1/inventory<br/>• GET /v1/order/:id<br/>• gRPC (internal)"]
     end
 
     subgraph Kafka["Apache Kafka :9092"]
@@ -76,7 +76,7 @@ flowchart TB
 
     PetStore <-->|HTTP| Query
     PetStore <-->|HTTP| Inventory
-    Query <-->|HTTP| Inventory
+    Query <-->|gRPC/REST| Inventory
 
     Inventory -->|produce| OE
     OE -->|consume| Query
@@ -106,12 +106,21 @@ flowchart TB
 ## Running Tests
 
 ```bash
-# Query microservice
-cd query-microservice && mvn test
+# All tests (use ./mvnw in cloud/CI)
+cd query-microservice && ./mvnw test
+cd inventory-microservice && ./mvnw test
 
-# Inventory microservice
-cd inventory-microservice && mvn test
+# With coverage (JaCoCo)
+./mvnw verify
 ```
+
+See [docs/TESTING.md](docs/TESTING.md) for test categories, important tests, and gRPC testing notes. See [docs/IMPROVEMENT_REPORT.md](docs/IMPROVEMENT_REPORT.md) for future improvements and suggested technologies.
+
+## gRPC (Query ↔ Inventory)
+
+Query syncs with Inventory via **gRPC** (port 9090) when `inventory.grpc.enabled=true`. Operations: `GetInventory`, `GetOrder`, `RefreshInventory`. REST remains available as fallback. See [docs/GRPC_IMPLEMENTATION.md](docs/GRPC_IMPLEMENTATION.md).
+
+**Build order**: `inventory-grpc-api` must be installed before Query/Inventory. `./start.sh` handles this.
 
 ## Important Configuration
 
@@ -126,10 +135,12 @@ cd inventory-microservice && mvn test
 
 This microservice performs queries to the inventory microservice and the pet shop API. It supports the following operations:
 
-- `GET /v1/inventory` This operation queries the inventory endpoint of the inventory microservice and returns the result.
-- `GET /v1/pet` This operation queries the list of pets from the pet shop API and returns the results.
-- `POST /v1/pet/{id}/adopt` This operation performs the "adoption" of a pet from the shop. It requires a valid ID from the pet shop and it triggers an adoption event, which is consumed by the inventory microservice, which then in turn emits an event.
-- `GET /v1/orders` This operation queries the service's database to get a list of all the orders currently registered in the system. The orders are created from events wich the inventory microservice emits.
+- `GET /v1/inventory` Proxies to the inventory microservice (gRPC or REST).
+- `GET /v1/pets` Lists pets from PetStore; supports `id`, `status`, `tags` filters.
+- `POST /v1/pets/{id}/reserve` Reserves a pet (Ticketmaster-style); returns token.
+- `POST /v1/pets/{id}/adopt` Adopts a pet; requires `X-Reservation-Token` when Redis is available.
+- `GET /v1/orders` Lists orders from local DB (synced via Kafka).
+- `GET /v1/orders/{id}/live` Proxies live order from Inventory.
 
 The Swagger page is accessible at [http://localhost:8086/swagger-ui.html](http://localhost:8086/swagger-ui.html)
 
@@ -139,9 +150,12 @@ The Swagger page is accessible at [http://localhost:8086/swagger-ui.html](http:/
 
 This microservice performs queries to the pet shop API. This service is used by the query service to perform some queries. It supports the following operations:
 
-- `GET /v1/inventory` This operation queries the inventory endpoint of the pet shop API and returns the result. It is intended to be used by the query microservice.
+- `GET /v1/inventory` Fetches inventory from PetStore; optional `status`, `lowStockThreshold` filters.
+- `GET /v1/order/{id}` Fetches single order from PetStore.
+- `POST /v1/inventory/refresh` Triggers order sync and returns refreshed inventory.
+- **gRPC (port 9090)**: GetInventory, GetOrder, RefreshInventory for Query sync.
 
-It also performs a scheduled query of the inventory of the pet shop API to "update" the inventory of the shop in the microservice ecosystem. The service performs a query of orders (generated randomly as integers in the range of 1-10) to the [orders endpoint](https://petstore.swagger.io/v2/store/order) of the pet shop API, triggering an event if the order exists, this event is consumed by the query microservice which in turn updates the entity in question in its database.
+Scheduled order sync queries PetStore orders (random IDs 1–10); found orders emit events consumed by Query.
 
 The Swagger page is accessible at [http://localhost:8085/swagger-ui.html](http://localhost:8085/swagger-ui.html)
 

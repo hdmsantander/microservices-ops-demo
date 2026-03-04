@@ -9,6 +9,8 @@
 | v5.1 | 2025-03-04 | List-all-pets option for GET /v1/pets; Testing Scope section (adoption process) |
 | v5.2 | 2025-03-04 | gRPC for Query ↔ Inventory sync (GetInventory, GetOrder, Refresh); see [GRPC_IMPLEMENTATION.md](GRPC_IMPLEMENTATION.md) |
 
+**Related docs:** [TESTING.md](TESTING.md), [IMPROVEMENT_REPORT.md](IMPROVEMENT_REPORT.md)
+
 ---
 
 ## Project Context

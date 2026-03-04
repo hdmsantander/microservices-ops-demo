@@ -17,15 +17,22 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import org.springframework.test.util.ReflectionTestUtils;
+
+import mx.hdmsantander.opsdemo.query.grpc.InventoryGrpcClient;
 
 @ExtendWith(MockitoExtension.class)
 class InventoryServiceTest {
 
 	@Mock
 	private RestTemplate restTemplate;
+
+	@Mock
+	private InventoryGrpcClient inventoryGrpcClient;
 
 	private InventoryService inventoryService;
 	private ObjectMapper objectMapper = new ObjectMapper();
@@ -36,6 +43,21 @@ class InventoryServiceTest {
 		ReflectionTestUtils.setField(inventoryService, "restTemplate", restTemplate);
 		ReflectionTestUtils.setField(inventoryService, "objectMapper", objectMapper);
 		ReflectionTestUtils.setField(inventoryService, "inventoryBaseUrl", "http://localhost:8085");
+		ReflectionTestUtils.setField(inventoryService, "grpcEnabled", false);
+		ReflectionTestUtils.setField(inventoryService, "inventoryGrpcClient", null);
+	}
+
+	@Test
+	void getInventory_usesGrpc_whenEnabled() throws Exception {
+		ReflectionTestUtils.setField(inventoryService, "grpcEnabled", true);
+		ReflectionTestUtils.setField(inventoryService, "inventoryGrpcClient", inventoryGrpcClient);
+		ObjectNode expected = objectMapper.createObjectNode().put("available", 15);
+		when(inventoryGrpcClient.getInventory(null, null)).thenReturn(expected);
+
+		JsonNode result = inventoryService.getInventory(null, null);
+
+		assertThat(result).isEqualTo(expected);
+		verify(inventoryGrpcClient).getInventory(null, null);
 	}
 
 	@Test
