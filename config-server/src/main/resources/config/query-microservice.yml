@@ -1,0 +1,43 @@
+# Query microservice configuration (from Config Server)
+# Merged with application.yml and local application.yml
+
+server:
+  port: 8086
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: password
+  jpa:
+    hibernate:
+      ddl-auto: update
+    generate-ddl: true
+    show-sql: true
+    database-platform: org.hibernate.dialect.H2Dialect
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  boot:
+    admin:
+      client:
+        url: http://localhost:8089
+        instance:
+          service-url: http://localhost:8086
+
+reservation:
+  ttl-seconds: 300
+  cleanup-interval-seconds: 60
+
+inventory:
+  service-url: http://localhost:8085
+  grpc:
+    enabled: true
+
+grpc:
+  client:
+    inventory:
+      address: static://localhost:9090
+      negotiationType: PLAINTEXT

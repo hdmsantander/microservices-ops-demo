@@ -4,6 +4,8 @@ server:
 spring:
   application:
     name: admin-server
+  config:
+    import: optional:configserver:http://localhost:8888
 
 management:
   endpoints:

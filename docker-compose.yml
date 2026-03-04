@@ -85,6 +85,18 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
+  config-server:
+    build:
+      context: ./config-server
+      dockerfile: Dockerfile
+    container_name: config-server-demo
+    network_mode: host
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8888/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
   admin-server:
     build:
       context: ./admin-server
@@ -94,6 +106,8 @@ services:
       SERVER_PORT: 8089
     network_mode: host
     depends_on:
+      config-server:
+        condition: service_healthy
       kafka:
         condition: service_healthy
     healthcheck:
@@ -109,6 +123,8 @@ services:
     container_name: query-microservice-demo
     network_mode: host
     depends_on:
+      config-server:
+        condition: service_healthy
       redis:
         condition: service_healthy
       kafka:
@@ -130,6 +146,8 @@ services:
     container_name: inventory-microservice-demo
     network_mode: host
     depends_on:
+      config-server:
+        condition: service_healthy
       kafka:
         condition: service_healthy
       prometheus:

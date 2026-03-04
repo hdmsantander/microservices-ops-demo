@@ -3,6 +3,7 @@
 This repository holds a Spring Boot OPS demo with the following components:
 
 - Two microservices (Spring Boot 4.0.3) that perform requests to the [Swagger's PetStore](https://petstore.swagger.io/) and communicate with each other using **gRPC** (primary) or HTTP and [Spring for Apache Kafka](https://spring.io/projects/spring-kafka).
+- A **Spring Cloud Config Server** (port 8888) for centralized configuration. Query, Inventory, and Admin Server fetch config at startup. See [docs/CONFIG_SERVER.md](docs/CONFIG_SERVER.md).
 - A Zipkin server that receives traces from the microservices via [Micrometer Tracing](https://micrometer.io/docs/tracing) (Brave).
 - A Prometheus server that scrapes metrics from [Spring Boot Actuator](https://docs.spring.io/spring-boot/docs/current/reference/html/actuator.html).
 - A Kafka cluster (landoop/fast-data-dev) for event-driven communication between the microservices and the tracer, including a Web UI.
@@ -21,7 +22,7 @@ This repository holds a Spring Boot OPS demo with the following components:
 ./start.sh
 ```
 
-This script packages both microservices, builds Docker images, and starts the entire stack (Kafka, Zipkin, Prometheus, and both microservices).
+This script packages Config Server, both microservices, and Admin Server, builds Docker images, and starts the entire stack (Config Server, Kafka, Zipkin, Prometheus, Admin, and both microservices).
 
 ### Start infrastructure only (Kafka, Zipkin, Prometheus)
 
@@ -41,12 +42,17 @@ Or directly: `docker compose -f docker-compose-minimal.yml up`
 Then run the microservices locally:
 
 ```bash
-# Terminal 1 - Inventory microservice (port 8085)
-cd inventory-microservice && mvn spring-boot:run
+# Terminal 1 - Config Server (port 8888, optional)
+cd config-server && ./mvnw spring-boot:run
 
-# Terminal 2 - Query microservice (port 8086)
-cd query-microservice && mvn spring-boot:run
+# Terminal 2 - Inventory microservice (port 8085)
+cd inventory-microservice && ./mvnw spring-boot:run
+
+# Terminal 3 - Query microservice (port 8086)
+cd query-microservice && ./mvnw spring-boot:run
 ```
+
+Config Server is optional: if not running, services use local `application.yml`.
 
 ## Architecture & Event Flow
 
@@ -56,10 +62,19 @@ flowchart TB
         PetStore["Pet Store API<br/>(petstore.swagger.io)"]
     end
 
+    subgraph Config["Configuration"]
+        ConfigServer["Config Server<br/>:8888"]
+    end
+
     subgraph Microservices["Microservices"]
         Query["Query Service<br/>:8086<br/>• GET /v1/pets<br/>• POST /v1/pets/:id/reserve<br/>• POST /v1/pets/:id/adopt<br/>• GET /v1/orders<br/>• GET /v1/inventory"]
         Inventory["Inventory Service<br/>:8085, :9090<br/>• GET /v1/inventory<br/>• GET /v1/order/:id<br/>• gRPC (internal)"]
+        Admin["Admin Server :8089"]
     end
+
+    ConfigServer -.->|config| Query
+    ConfigServer -.->|config| Inventory
+    ConfigServer -.->|config| Admin
 
     subgraph Kafka["Apache Kafka :9092"]
         direction TB
@@ -90,6 +105,8 @@ flowchart TB
 
     Prometheus -->|scrape /actuator/prometheus| Query
     Prometheus -->|scrape /actuator/prometheus| Inventory
+    Prometheus -->|scrape /actuator/prometheus| ConfigServer
+    Prometheus -->|scrape /actuator/prometheus| Admin
 ```
 
 > **Note:** Microservices send traces to Zipkin via Kafka (`zipkin` topic). Zipkin consumes from Kafka. Configure `management.tracing.export.zipkin.kafka.bootstrap-servers`.
@@ -124,6 +141,7 @@ Query syncs with Inventory via **gRPC** (port 9090) when `inventory.grpc.enabled
 
 ## Important Configuration
 
+- **Config Server**: Runs on port 8888. Clients use `spring.config.import=optional:configserver:http://localhost:8888`. Config is served from `config-server/src/main/resources/config/`. If Config Server is down, services fall back to local `application.yml`. See [docs/CONFIG_SERVER.md](docs/CONFIG_SERVER.md).
 - **Kafka**: Uses `landoop/fast-data-dev` (Kafka + Zookeeper + Schema Registry + Web UI). Broker at `localhost:9092`, Web UI at [http://localhost:3030](http://localhost:3030). Override broker with `spring.cloud.stream.kafka.binder.brokers` or `SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS`.
 - **Tracing**: Traces are sent to Zipkin via Kafka by default. Set `management.tracing.export.zipkin.transport: kafka` (default) or `http`. For Kafka: `kafka.bootstrap-servers` (default: `localhost:9092`), `kafka.topic` (default: `zipkin`). For HTTP: set `transport: http` and `endpoint: http://localhost:9411/api/v2/spans`.
 - **Spring Cloud 2025.1.0**: Required for Spring Boot 4.0.3 compatibility.
@@ -169,8 +187,8 @@ The Prometheus server is accessible at [http://localhost:9412](http://localhost:
 
 Grafana is accessible at [http://localhost:3000](http://localhost:3000) (admin/admin). Provisioned dashboards:
 
-- **Pet Shop Overview** – Adoptions, reservations, orders, query rates, latencies
-- **Infrastructure** – Redis (memory, connections), JVM heap, HTTP request rates
+- **Pet Shop Overview** – Adoptions, reservations, orders, reservation conflicts, Redis-unavailable fallback, query rates, latencies (pet, adoption, inventory, orders live/refresh/get)
+- **Infrastructure** – Redis (memory, connections, commands), Kafka consumer lag & producer rate, JVM heap, HTTP request rate & latency (Query, Inventory, Admin, Config Server)
 
 ### Example of metrics reported
 

@@ -8,9 +8,9 @@ SKIP_TESTS=""
 MODE="full"
 TESTS_ONLY=""
 
-# Ports required by Docker stack (Redis:6379, redis_exporter:9121, Kafka:9092, Prometheus:9412, Zipkin:9411, Grafana:3000, Admin:8089, inventory:8085/9090, query:8086)
+# Ports required by Docker stack (Redis:6379, redis_exporter:9121, Kafka:9092, Prometheus:9412, Zipkin:9411, Grafana:3000, Config:8888, Admin:8089, inventory:8085/9090, query:8086)
 PORTS_MINIMAL="6379 9092 9411 9412 9121"
-PORTS_FULL="6379 8085 8086 8089 9090 9092 9411 9412 9121 3000"
+PORTS_FULL="6379 8085 8086 8088 8089 9090 9092 9411 9412 9121 3000"
 
 # Maven command: use wrapper (./mvnw) only in cloud env or when --mvnw; default mvn
 USE_MVNW="${USE_MVNW:-}"
@@ -166,9 +166,10 @@ start_full() {
     local mvn_q="$(get_mvn query-microservice)"
     local mvn_i="$(get_mvn inventory-microservice)"
     local mvn_a="$(get_mvn admin-server)"
-    local mvn_api="$(get_mvn inventory-microservice)"
+    local mvn_c="$(get_mvn config-server)"
     echo "Packaging microservices..."
     (cd inventory-grpc-api && $mvn_i -q -f pom.xml install -DskipTests) && \
+    (cd config-server && $mvn_c -q package -DskipTests) && \
     (cd query-microservice && $mvn_q -q package ${SKIP_TESTS}) && \
     (cd inventory-microservice && $mvn_i -q package ${SKIP_TESTS}) && \
     (cd admin-server && $mvn_a -q package -DskipTests) && \

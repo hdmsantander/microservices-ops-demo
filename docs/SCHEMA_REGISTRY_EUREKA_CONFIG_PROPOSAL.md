@@ -250,15 +250,15 @@ Centralized configuration server. Clients fetch config (e.g. from Git, filesyste
 
 ## 5. Recommended Roadmap
 
-### Phase 1 (Current – No Change)
+### Phase 1 (Current)
 
 - **Schema Registry**: Defer. Use shared `events-api` module + contract tests instead.
 - **Eureka**: Skip. Static URLs acceptable for 2-service demo.
-- **Config Server**: Optional POC; not blocking.
+- **Config Server**: **Implemented** — see [CONFIG_SERVER.md](CONFIG_SERVER.md). Port 8888, native backend.
 
 ### Phase 2 (When Expanding)
 
-1. **Spring Config Server** (first)
+1. ~~**Spring Config Server**~~ (done)
    - Add when preparing multi-environment (dev/staging/prod) or when config duplication becomes painful.
    - Use `spring.config.import=optional:configserver:…` for graceful fallback.
 

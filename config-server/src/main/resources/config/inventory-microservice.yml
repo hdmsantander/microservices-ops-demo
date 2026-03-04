@@ -1,0 +1,27 @@
+# Inventory microservice configuration (from Config Server)
+
+server:
+  port: 8085
+
+grpc:
+  server:
+    port: 9090
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    generate-ddl: true
+    show-sql: false
+  h2:
+    console:
+      enabled: true
+  boot:
+    admin:
+      client:
+        url: http://localhost:8089
+        instance:
+          service-url: http://localhost:8085

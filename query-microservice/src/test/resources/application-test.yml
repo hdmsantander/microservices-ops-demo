@@ -1,5 +1,8 @@
-# Use HTTP for Zipkin in tests (Kafka client disabled; no Kafka required)
+# Disable Config Server in tests (use local config only)
 spring:
+  cloud:
+    config:
+      enabled: false
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration

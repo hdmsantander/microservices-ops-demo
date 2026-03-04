@@ -1,0 +1,4 @@
+# Admin server configuration (from Config Server)
+
+server:
+  port: 8089
