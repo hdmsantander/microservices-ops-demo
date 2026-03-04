@@ -165,6 +165,13 @@ The Swagger page is accessible at [http://localhost:8085/swagger-ui.html](http:/
 
 The Prometheus server is accessible at [http://localhost:9412](http://localhost:9412)
 
+## Grafana dashboards
+
+Grafana is accessible at [http://localhost:3000](http://localhost:3000) (admin/admin). Provisioned dashboards:
+
+- **Pet Shop Overview** – Adoptions, reservations, orders, query rates, latencies
+- **Infrastructure** – Redis (memory, connections), JVM heap, HTTP request rates
+
 ### Example of metrics reported
 
 Here are some examples of the metrics registered.
