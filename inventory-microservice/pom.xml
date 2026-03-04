@@ -146,10 +146,25 @@
 			<artifactId>grpc-server-spring-boot-starter</artifactId>
 			<version>3.1.0.RELEASE</version>
 		</dependency>
-		<!-- Align grpc-core with inventory-grpc-api (1.68.2) to avoid UNIMPLEMENTED/method mapping issues -->
+		<!-- Align all grpc libs with inventory-grpc-api (1.68.2) to avoid NoClassDefFoundError/UNIMPLEMENTED -->
+		<dependency>
+			<groupId>io.grpc</groupId>
+			<artifactId>grpc-api</artifactId>
+			<version>${grpc.version}</version>
+		</dependency>
 		<dependency>
 			<groupId>io.grpc</groupId>
 			<artifactId>grpc-core</artifactId>
+			<version>${grpc.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>io.grpc</groupId>
+			<artifactId>grpc-netty-shaded</artifactId>
+			<version>${grpc.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>io.grpc</groupId>
+			<artifactId>grpc-inprocess</artifactId>
 			<version>${grpc.version}</version>
 		</dependency>
 		<dependency>
