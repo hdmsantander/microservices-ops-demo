@@ -19,6 +19,7 @@
 	<properties>
 		<java.version>21</java.version>
 		<spring-cloud.version>2025.1.0</spring-cloud.version>
+		<grpc.version>1.68.2</grpc.version>
 	</properties>
 
 	<dependencyManagement>
@@ -138,6 +139,12 @@
 			<groupId>net.devh</groupId>
 			<artifactId>grpc-client-spring-boot-starter</artifactId>
 			<version>3.1.0.RELEASE</version>
+		</dependency>
+		<!-- Align grpc-core with inventory-grpc-api (1.68.2) to avoid NoClassDefFoundError: InternalGlobalInterceptors -->
+		<dependency>
+			<groupId>io.grpc</groupId>
+			<artifactId>grpc-core</artifactId>
+			<version>${grpc.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.projectlombok</groupId>

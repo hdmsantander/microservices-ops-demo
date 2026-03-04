@@ -21,7 +21,7 @@ This report documents the OrderService resilience logic for retrieving orders fr
 
 | Pattern      | Instance     | Settings |
 |-------------|--------------|----------|
-| CircuitBreaker | orderService | failureRateThreshold: 50, slowCallRateThreshold: 100, slowCallDurationThreshold: 60s, permittedNumberOfCallsInHalfOpenState: 5, slidingWindowSize: 100, minimumNumberOfCalls: 5 |
+| CircuitBreaker | orderService | failureRateThreshold: 50, slowCallRateThreshold: 100, slowCallDurationThreshold: 60s, permittedNumberOfCallsInHalfOpenState: 5, slidingWindowSize: 100, minimumNumberOfCalls: 5, **ignoreExceptions: NotFound** |
 | Retry       | orderService | maxAttempts: 5, waitDuration: 500ms, exponentialBackoff, **ignoreExceptions: NotFound** |
 
 ---
@@ -38,7 +38,7 @@ This report documents the OrderService resilience logic for retrieving orders fr
 | 4 | Mix 404 and 200            | Mixed 404/200 per order                | 3                  | 0–3         | CLOSED              |
 | 5 | Circuit OPEN               | (after scenario 3)                     | 0 (fallback only)  | 0           | OPEN               |
 
-\* 404 may or may not be counted as failures depending on Circuit Breaker config; Retry ignores 404.  
+\* 404 is excluded from circuit breaker metrics via ignoreExceptions; Retry also ignores 404.  
 † 3 fetches × up to 5 retries each; circuit needs ≥5 failures to OPEN, so ≥2 `updateOrders()` runs.
 
 ### 2.2 Scenario Details
@@ -184,7 +184,7 @@ Report path: `inventory-microservice/target/site/jacoco/mx.hdmsantander.opsdemo.
 ## 7. Recommendations
 
 1. **404 and Circuit Breaker:**  
-   If 404 should not contribute to opening the circuit, add `ignoreExceptions` for `HttpClientErrorException.NotFound` in the Circuit Breaker config.
+   Implemented: `ignoreExceptions` for `HttpClientErrorException.NotFound` is configured on the `orderService` circuit breaker so expected 404s from random order fetches (PetStore: only IDs 1–5 exist) do not trip the circuit.
 
 2. **Retry vs. Circuit Breaker:**  
    Aspect order (Circuit Breaker=1, Retry=2) ensures Retry is inner and Circuit Breaker is outer, so retries occur before the circuit records a failure.

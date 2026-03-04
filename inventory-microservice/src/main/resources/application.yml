@@ -73,6 +73,9 @@ resilience4j:
         baseConfig: default
       orderService:
         baseConfig: default
+        # 404 is expected when fetching random orders 1-10 (PetStore: only 1-5 exist)
+        ignoreExceptions:
+          - 'org.springframework.web.client.HttpClientErrorException$NotFound'
     aspect-order: 1
   retry:
     configs:

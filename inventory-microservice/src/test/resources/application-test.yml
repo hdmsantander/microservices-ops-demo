@@ -8,6 +8,11 @@ spring:
     scheduling:
       enabled: false
 
+# Disable gRPC server in tests (avoids port bind; Resilience4j tests use REST mocks)
+grpc:
+  server:
+    port: -1
+
 management:
   tracing:
     export:
