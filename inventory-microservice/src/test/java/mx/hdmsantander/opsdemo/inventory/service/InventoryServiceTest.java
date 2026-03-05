@@ -99,4 +99,42 @@ class InventoryServiceTest {
 		verify(orderService).updateOrders();
 		verify(restTemplate).getForEntity(any(String.class), eq(String.class));
 	}
+
+	@Test
+	void getInventory_withBothFilters_appliesStatusAndLowStock() throws Exception {
+		String json = "{\"available\":2,\"pending\":10,\"sold\":1}";
+		when(restTemplate.getForEntity(any(String.class), eq(String.class)))
+				.thenReturn(ResponseEntity.ok(json));
+
+		JsonNode result = inventoryService.getInventory("available", 5);
+
+		assertThat(result).isNotNull();
+		assertThat(result.has("available")).isTrue();
+		assertThat(result.get("available").asInt()).isEqualTo(2);
+		assertThat(result.has("pending")).isFalse();
+		verify(restTemplate).getForEntity(any(String.class), eq(String.class));
+	}
+
+	@Test
+	void getInventory_nullBody_returnsEmptyNode() {
+		when(restTemplate.getForEntity(any(String.class), eq(String.class)))
+				.thenReturn(ResponseEntity.ok((String) null));
+
+		JsonNode result = inventoryService.getInventory(null, null);
+
+		assertThat(result).isNotNull();
+		assertThat(result.isEmpty()).isTrue();
+	}
+
+	@Test
+	void getInventory_statusFilterWithMissingKey_returnsFiltered() throws Exception {
+		String json = "{\"available\":10,\"pending\":2}";
+		when(restTemplate.getForEntity(any(String.class), eq(String.class)))
+				.thenReturn(ResponseEntity.ok(json));
+
+		JsonNode result = inventoryService.getInventory("sold", null);
+
+		assertThat(result).isNotNull();
+		assertThat(result.isEmpty()).isTrue();
+	}
 }

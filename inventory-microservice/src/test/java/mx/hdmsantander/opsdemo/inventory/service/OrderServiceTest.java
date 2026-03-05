@@ -65,4 +65,14 @@ class OrderServiceTest {
 
 		assertThat(result).isEmpty();
 	}
+
+	@Test
+	void getOrderById_returnsEmpty_whenFetchReturnsNull() {
+		when(restTemplate.getForEntity(any(String.class), eq(OrderDto.class), anyMap()))
+				.thenReturn(ResponseEntity.ok().body(null));
+
+		Optional<OrderDto> result = orderService.getOrderById(1);
+
+		assertThat(result).isEmpty();
+	}
 }

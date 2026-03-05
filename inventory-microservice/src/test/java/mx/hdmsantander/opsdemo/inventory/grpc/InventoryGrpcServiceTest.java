@@ -124,4 +124,60 @@ class InventoryGrpcServiceTest {
 		verify(refreshObserver).onCompleted();
 		assertThat(captor.getValue().getJsonBody()).contains("\"available\":5");
 	}
+
+	@Test
+	void getInventory_withBlankStatus_passesNullToService() throws Exception {
+		when(inventoryService.getInventory(null, null))
+				.thenReturn(objectMapper.createObjectNode().put("available", 1));
+
+		grpcService.getInventory(
+				GetInventoryRequest.newBuilder().setStatus("  ").build(),
+				inventoryObserver);
+
+		verify(inventoryService).getInventory(null, null);
+		verify(inventoryObserver).onNext(any(GetInventoryResponse.class));
+		verify(inventoryObserver).onCompleted();
+	}
+
+	@Test
+	void getOrder_withNullDtoFields_handlesGracefully() {
+		OrderDto dto = OrderDto.builder().id(null).petId(null).quantity(null).shipDate(null).status(null).complete(null).build();
+		when(orderService.getOrderById(1)).thenReturn(Optional.of(dto));
+
+		grpcService.getOrder(GetOrderRequest.newBuilder().setOrderId(1).build(), orderObserver);
+
+		ArgumentCaptor<GetOrderResponse> captor = ArgumentCaptor.forClass(GetOrderResponse.class);
+		verify(orderObserver).onNext(captor.capture());
+		verify(orderObserver).onCompleted();
+		assertThat(captor.getValue().hasOrder()).isTrue();
+		assertThat(captor.getValue().getOrder().getId()).isEqualTo(0);
+		assertThat(captor.getValue().getOrder().getPetId()).isEmpty();
+	}
+
+	@Test
+	void getInventory_exception_callsOnError() {
+		when(inventoryService.getInventory(null, null)).thenThrow(new RuntimeException("API down"));
+
+		grpcService.getInventory(GetInventoryRequest.newBuilder().build(), inventoryObserver);
+
+		verify(inventoryObserver).onError(any(Throwable.class));
+	}
+
+	@Test
+	void getOrder_exception_callsOnError() {
+		when(orderService.getOrderById(1)).thenThrow(new RuntimeException("DB error"));
+
+		grpcService.getOrder(GetOrderRequest.newBuilder().setOrderId(1).build(), orderObserver);
+
+		verify(orderObserver).onError(any(Throwable.class));
+	}
+
+	@Test
+	void refreshInventory_exception_callsOnError() {
+		when(inventoryService.refreshInventoryAndOrders()).thenThrow(new RuntimeException("Refresh failed"));
+
+		grpcService.refreshInventory(RefreshInventoryRequest.newBuilder().build(), refreshObserver);
+
+		verify(refreshObserver).onError(any(Throwable.class));
+	}
 }

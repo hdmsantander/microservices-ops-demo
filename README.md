@@ -55,6 +55,8 @@ cd query-microservice && ./mvnw spring-boot:run
 
 Config Server is optional: if not running, services use local `application.yml`.
 
+See [docs/DOCKER.md](docs/DOCKER.md) for container best practices, startup ordering, and health checks.
+
 ## Architecture & Event Flow
 
 ```mermaid
@@ -211,14 +213,16 @@ The Swagger page is accessible at [http://localhost:8085/swagger-ui.html](http:/
 
 ![Prometheus service](.img/3.png)
 
-The Prometheus server is accessible at [http://localhost:9412](http://localhost:9412)
+The Prometheus server is accessible at [http://localhost:9412](http://localhost:9412).
+
+**Scrape targets**: Spring Boot apps (8085, 8086, 8088, 8089), Redis exporter (9121), Elasticsearch exporter (9114), Kafka exporter (9308), Prometheus self (9412).
 
 ## Grafana dashboards
 
 Grafana is accessible at [http://localhost:3000](http://localhost:3000) (admin/admin). Provisioned dashboards:
 
-- **Pet Shop Overview** – Adoptions, reservations, orders, reservation conflicts, Redis-unavailable fallback, query rates, latencies (pet, adoption, inventory, orders live/refresh/get)
-- **Infrastructure** – Redis (memory, connections, commands), Kafka consumer lag & producer rate, JVM heap, HTTP request rate & latency (Query, Inventory, Admin, Config Server)
+- **Pet Shop Overview** – Ecosystem health (Redis, Kafka, Elasticsearch, Prometheus targets), adoptions, reservations, orders, reservation conflicts, query rates, latencies (pet, adoption, inventory, orders live/refresh/get). Links to Infrastructure dashboard.
+- **Infrastructure** – Redis, Elasticsearch (cluster status, nodes, docs, shards, index store), Kafka (brokers, consumer lag, producer rate), Spring Boot (JVM heap, HTTP rate & latency), Prometheus (targets up/down, scrape duration)
 
 ### Example of metrics reported
 
@@ -265,7 +269,7 @@ void registerGauge() {
 
 ## Kibana (Elasticsearch logs)
 
-Kibana is accessible at [http://localhost:5601](http://localhost:5601). Use **Discover** to search logs from Query and Inventory. Logs are ingested from the `application-logs` Kafka topic via Kafka Connect. Create dashboards for log level, service, or trace correlation. See [docs/ELK_LOGGING.md](docs/ELK_LOGGING.md) for setup and dashboard instructions.
+Kibana is accessible at [http://localhost:5601](http://localhost:5601). Use **Discover** to search logs from Query and Inventory. Logs are ingested from the `application-logs` Kafka topic via Kafka Connect. See [docs/KIBANA_DASHBOARDS_PROPOSAL.md](docs/KIBANA_DASHBOARDS_PROPOSAL.md) for proposed dashboards (Log Overview, Error Monitoring, Trace Correlation, Log Processing). Export dashboards from Kibana and place `.ndjson` in `elk/init/dashboards/` for auto-import on startup. See [docs/ELK_LOGGING.md](docs/ELK_LOGGING.md) for setup.
 
 ## Zipkin server
 
