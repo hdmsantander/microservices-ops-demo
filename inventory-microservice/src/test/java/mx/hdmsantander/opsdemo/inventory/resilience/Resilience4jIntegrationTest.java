@@ -7,9 +7,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.atMost;
 import static org.mockito.Mockito.clearInvocations;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -77,10 +77,13 @@ class Resilience4jIntegrationTest {
 	private CircuitBreakerRegistry circuitBreakerRegistry;
 
 	@BeforeEach
-	void resetOrderServiceCircuit() {
-		CircuitBreaker cb = circuitBreakerRegistry.circuitBreaker("orderService");
-		if (cb != null) {
-			cb.transitionToClosedState();
+	void resetCircuitBreakersAndMock() {
+		reset(restTemplate);
+		for (String name : new String[] { "orderService", "inventoryService" }) {
+			CircuitBreaker cb = circuitBreakerRegistry.circuitBreaker(name);
+			if (cb != null) {
+				cb.transitionToClosedState();
+			}
 		}
 	}
 
