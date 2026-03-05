@@ -2,24 +2,33 @@
 <configuration>
 	<include resource="org/springframework/boot/logging/logback/defaults.xml"/>
 	<springProperty scope="context" name="appName" source="spring.application.name" defaultValue="inventory-microservice"/>
+	<springProperty scope="context" name="environment" source="spring.profiles.active" defaultValue="development"/>
 	<springProperty scope="context" name="kafkaBrokers" source="logging.kafka.bootstrap-servers" defaultValue="localhost:9092"/>
 	<springProperty scope="context" name="kafkaTopic" source="logging.kafka.topic" defaultValue="application-logs"/>
 
-	<!-- JSON console with trace correlation (traceId, spanId from Micrometer) -->
+	<!-- JSON console: trace-correlated, enriched for ELK -->
 	<appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
 		<encoder class="net.logstash.logback.encoder.LogstashEncoder">
 			<includeMdcKeyName>traceId</includeMdcKeyName>
 			<includeMdcKeyName>spanId</includeMdcKeyName>
-			<customFields>{"service":"${appName}"}</customFields>
+			<includeMdcKeyName>parentSpanId</includeMdcKeyName>
+			<customFields>{"service":"${appName}","environment":"${environment}","host":"${HOSTNAME:-localhost}"}</customFields>
+			<includeStacktrace>true</includeStacktrace>
+			<includeCallerData>false</includeCallerData>
 		</encoder>
 	</appender>
 
-	<!-- Kafka appender: enable with spring.profiles.include=kafka-logging -->
+	<!-- Kafka appender: enriched JSON for ELK traceability (traceId, spanId, service, thread, etc.) -->
 	<springProfile name="kafka-logging">
 		<appender name="KAFKA" class="com.github.danielwegener.logback.kafka.KafkaAppender">
-			<encoder class="com.github.danielwegener.logback.kafka.encoding.PatternLayoutKafkaMessageEncoder">
-				<layout class="ch.qos.logback.classic.PatternLayout">
-					<pattern>{"@timestamp":"%d{ISO8601}","level":"%-5level","logger":"%logger{40}","message":"%msg","traceId":"%X{traceId:-}","spanId":"%X{spanId:-}","service":"${appName}"}%n</pattern>
+			<encoder class="com.github.danielwegener.logback.kafka.encoding.LayoutKafkaMessageEncoder">
+				<layout class="net.logstash.logback.layout.LogstashLayout">
+					<includeMdcKeyName>traceId</includeMdcKeyName>
+					<includeMdcKeyName>spanId</includeMdcKeyName>
+					<includeMdcKeyName>parentSpanId</includeMdcKeyName>
+					<customFields>{"service":"${appName}","environment":"${environment}","host":"${HOSTNAME:-localhost}"}</customFields>
+					<includeStacktrace>true</includeStacktrace>
+					<includeCallerData>false</includeCallerData>
 				</layout>
 			</encoder>
 			<topic>${kafkaTopic}</topic>

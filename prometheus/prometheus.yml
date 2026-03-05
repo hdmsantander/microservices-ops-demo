@@ -1,5 +1,5 @@
 # Prometheus config (compatible with Prometheus 2.45+)
-# Scrapes Spring Boot apps, redis_exporter (Redis metrics)
+# Scrapes: Spring Boot apps, Redis, Elasticsearch, Kafka, Prometheus self
 # With network_mode: host, all targets use localhost
 
 global:
@@ -14,6 +14,7 @@ scrape_configs:
       - targets: ['localhost:8085', 'localhost:8086', 'localhost:8088', 'localhost:8089']
         labels:
           env: demo
+          component: spring-boot
 
   - job_name: 'redis'
     metrics_path: /metrics
@@ -23,3 +24,29 @@ scrape_configs:
         labels:
           instance: redis-demo
           env: demo
+          component: redis
+
+  - job_name: 'elasticsearch'
+    metrics_path: /metrics
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['localhost:9114']
+        labels:
+          env: demo
+          component: elasticsearch
+
+  - job_name: 'kafka'
+    metrics_path: /metrics
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['localhost:9308']
+        labels:
+          env: demo
+          component: kafka
+
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9412']
+        labels:
+          env: demo
+          component: prometheus

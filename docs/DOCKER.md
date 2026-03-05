@@ -38,7 +38,7 @@ All Spring Boot services (Query, Inventory, Config Server, Admin Server) use a c
 
 ## Docker Compose Startup Order
 
-The full stack starts in seven layers:
+The full stack starts in seven layers. See [ARCHITECTURE.md](ARCHITECTURE.md) for the diagram.
 
 | Layer | Services | Depends On |
 |-------|----------|------------|

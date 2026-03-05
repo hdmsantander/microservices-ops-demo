@@ -6,8 +6,10 @@ The Query and Inventory microservices support sending application logs to Apache
 
 ## Features
 
-- **Structured JSON logs**: Console uses Logstash encoder; Kafka messages are JSON with `@timestamp`, `level`, `logger`, `message`, `traceId`, `spanId`, `service`.
-- **Trace correlation**: `traceId` and `spanId` from Micrometer Tracing are included for request correlation across services.
+- **Structured JSON logs**: Console and Kafka use Logstash layout for proper JSON encoding. Kafka messages include `@timestamp`, `level`, `logger_name`, `message`, `thread_name`, `traceId`, `spanId`, `parentSpanId`, `service`, `environment`, `host`, and `stack_trace` (for errors).
+- **Trace correlation**: `traceId` and `spanId` from Micrometer Tracing (Brave) are automatically populated in MDC and included in every log for request correlation across services. Copy a `traceId` from Zipkin to filter all related logs in Kibana.
+- **Service and environment**: Each log includes `service` (e.g. query-microservice), `environment` (e.g. development), and `host` for multi-instance and multi-environment filtering.
+- **Exception stack traces**: Errors include full `stack_trace` for debugging.
 - **Async delivery**: Kafka appender uses `AsynchronousDeliveryStrategy` plus `AsyncAppender` to avoid blocking application threads.
 - **Host keying**: Logs are keyed by host for ordered partitioning when desired.
 
@@ -46,11 +48,24 @@ Logs are ingested into **Elasticsearch** via Kafka Connect for Kibana dashboards
 kafka-console-consumer --bootstrap-server localhost:9092 --topic application-logs
 ```
 
-Example log message:
+Example log message (enriched for traceability):
 
 ```json
-{"@timestamp":"2025-03-05T00:00:00.000Z","level":"INFO","logger":"m.h.o.query.service.PetService","message":"Adopted pet 1","traceId":"abc123","spanId":"def456","service":"query-microservice"}
+{
+  "@timestamp": "2025-03-05T00:00:00.000Z",
+  "level": "INFO",
+  "logger_name": "m.h.o.query.service.PetService",
+  "message": "Adopted pet 1",
+  "thread_name": "http-nio-8086-exec-1",
+  "traceId": "abc123def456",
+  "spanId": "789xyz",
+  "service": "query-microservice",
+  "environment": "development",
+  "host": "hostname"
+}
 ```
+
+For errors, `stack_trace` is also included. Use `traceId` in Kibana to correlate logs across Query and Inventory with the same request.
 
 ## Tests
 

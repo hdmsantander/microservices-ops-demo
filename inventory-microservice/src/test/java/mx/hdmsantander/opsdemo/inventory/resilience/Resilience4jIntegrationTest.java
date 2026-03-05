@@ -94,17 +94,15 @@ class Resilience4jIntegrationTest {
 	@Test
 	@Order(1)
 	void inventoryService_returns_inventory_when_api_succeeds() throws Exception {
-		JsonNode inventory = objectMapper.createObjectNode().put("available", 10).put("pending", 2).put("sold", 5);
-		String jsonBody = objectMapper.writeValueAsString(inventory);
-		when(restTemplate.getForEntity(any(String.class), eq(String.class)))
-				.thenReturn(ResponseEntity.ok(jsonBody));
+		String jsonBody = "{\"available\":10,\"pending\":2,\"sold\":5}";
+		when(restTemplate.getForEntity(INVENTORY_URL, String.class)).thenReturn(ResponseEntity.ok(jsonBody));
 
 		JsonNode result = inventoryService.getInventory(null, null);
 
 		assertThat(result).isNotNull();
 		assertThat(result.has("available")).as("Inventory should have 'available' from stubbed API").isTrue();
 		assertThat(result.get("available").asInt()).isEqualTo(10);
-		verify(restTemplate).getForEntity(any(String.class), eq(String.class));
+		verify(restTemplate).getForEntity(INVENTORY_URL, String.class);
 	}
 
 	@Test

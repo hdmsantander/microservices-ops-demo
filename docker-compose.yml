@@ -1,6 +1,7 @@
 # Docker Compose - Full stack with dependency ordering and health checks
 # Startup order: infra (redis,kafka,es) -> config -> exporters -> observability -> elk -> microservices
 # Note: 'version' is obsolete in Compose V2, omitted to avoid warnings
+# Resource limits aid predictability; deploy.resources respected by Compose v2.24+
 
 services:
   # === Layer 1: Infrastructure (no deps) ===
@@ -8,6 +9,11 @@ services:
     image: redis:7-alpine
     container_name: redis-demo
     network_mode: host
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -22,6 +28,11 @@ services:
       ADV_HOST: 127.0.0.1
       RUNTESTS: 0
     network_mode: host
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
     healthcheck:
       test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list 2>/dev/null || exit 1"]
       interval: 10s
@@ -33,10 +44,15 @@ services:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
     container_name: elasticsearch-demo
     network_mode: host
+    restart: unless-stopped
     environment:
       discovery.type: single-node
       xpack.security.enabled: "false"
       "ES_JAVA_OPTS": "-Xms512m -Xmx512m"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
     healthcheck:
       test: ["CMD-SHELL", "curl -sS http://localhost:9200/_cluster/health?wait_for_status=yellow 2>/dev/null || exit 1"]
       interval: 10s
@@ -52,6 +68,10 @@ services:
     container_name: config-server-demo
     network_mode: host
     stop_grace_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8888/actuator/health/readiness || wget -q --spider http://localhost:8888/actuator/health || exit 1"]
       interval: 10s
@@ -96,9 +116,14 @@ services:
   zipkin:
     image: openzipkin/zipkin
     container_name: zipkin-demo
+    restart: unless-stopped
     environment:
       KAFKA_BOOTSTRAP_SERVERS: localhost:9092
     network_mode: host
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     depends_on:
       kafka:
         condition: service_healthy
@@ -112,6 +137,11 @@ services:
   prometheus:
     image: prom/prometheus:v2.55.0
     container_name: prometheus-demo
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
     volumes:
       - ./prometheus/:/etc/prometheus/
     command:
@@ -131,6 +161,11 @@ services:
   grafana:
     image: grafana/grafana:11.0.0
     container_name: grafana-demo
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
@@ -155,8 +190,13 @@ services:
     image: docker.elastic.co/kibana/kibana:8.17.0
     container_name: kibana-demo
     network_mode: host
+    restart: unless-stopped
     environment:
       ELASTICSEARCH_HOSTS: '["http://localhost:9200"]'
+    deploy:
+      resources:
+        limits:
+          memory: 1G
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -173,6 +213,11 @@ services:
       dockerfile: Dockerfile
     container_name: kafka-connect-demo
     network_mode: host
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     environment:
       CONNECT_BOOTSTRAP_SERVERS: localhost:9092
       CONNECT_REST_PORT: "8084"
@@ -223,10 +268,14 @@ services:
       context: ./admin-server
       dockerfile: Dockerfile
     container_name: admin-server-demo
-    environment:
-      SERVER_PORT: 8089
     network_mode: host
     stop_grace_period: 30s
+    environment:
+      SERVER_PORT: 8089
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     depends_on:
       config-server:
         condition: service_healthy
@@ -246,9 +295,14 @@ services:
       dockerfile: Dockerfile
     container_name: query-microservice-demo
     network_mode: host
+    restart: unless-stopped
     environment:
       SPRING_PROFILES_ACTIVE: development,kafka-logging
     stop_grace_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     depends_on:
       config-server:
         condition: service_healthy
@@ -275,9 +329,14 @@ services:
       dockerfile: Dockerfile
     container_name: inventory-microservice-demo
     network_mode: host
+    restart: unless-stopped
     environment:
       SPRING_PROFILES_ACTIVE: development,kafka-logging
     stop_grace_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     depends_on:
       config-server:
         condition: service_healthy

@@ -1,11 +1,16 @@
 #!/bin/bash
+# microservices-ops-demo startup script
+# Usage: ./start.sh [minimal|full|profile] [--skip-tests] [--tests-only] [--mvnw]
 
-set -e
+set -euo pipefail
 
-COMPOSE_MINIMAL="docker-compose-minimal.yml"
-COMPOSE_FULL="docker-compose.yml"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly COMPOSE_MINIMAL="docker-compose-minimal.yml"
+readonly COMPOSE_FULL="docker-compose.yml"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CURRENT_PHASE=""
+COMPOSE_ACTIVE=""
+COMPOSE_FILE=""
+SKIP_CLEANUP=""
 
 phase() {
     CURRENT_PHASE="$1"
@@ -19,7 +24,75 @@ fail() {
     exit 1
 }
 
-trap '[[ $? -ne 0 ]] && echo "" && echo "ERROR: Command failed during phase: ${CURRENT_PHASE:-unknown}" >&2' ERR
+print_resource_summary() {
+    local file="${1:-$COMPOSE_FILE}"
+    [[ -z "$file" ]] && return 0
+    if ! command -v docker &>/dev/null; then
+        print_resource_estimate "$file"
+        return 0
+    fi
+    local ids
+    ids=$(cd "$SCRIPT_DIR" && docker compose -f "$file" ps -q 2>/dev/null) || true
+    if [[ -z "$ids" ]]; then
+        print_resource_estimate "$file"
+        return 0
+    fi
+    echo ""
+    echo "=== Resource usage (before cleanup) ==="
+    docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}" $ids 2>/dev/null || true
+    echo ""
+    print_resource_estimate "$file"
+}
+
+print_resource_estimate() {
+    local file="$1"
+    echo "Estimated resource footprint (limits from compose):"
+    case "$file" in
+        *minimal*)
+            echo "  Minimal stack: 5 containers, ~2.1 GB RAM limit"
+            echo "  (Redis 256M, Kafka 1G, Zipkin 512M, Prometheus 256M, redis-exporter 64M)"
+            ;;
+        *docker-compose*)
+            echo "  Full stack: ~20 containers, ~6–7 GB RAM limit"
+            echo "  (Elasticsearch 1G, Kibana 1G, Kafka 1G, Grafana 512M, config/admin 512M each,"
+            echo "   query/inventory 512M each, Kafka Connect ~512M, others 64–256M)"
+            ;;
+        *)
+            echo "  Run 'docker stats' for live usage."
+            ;;
+    esac
+    echo ""
+}
+
+cleanup_stacks() {
+    [[ -n "$SKIP_CLEANUP" ]] && return 0
+    if [[ -n "$COMPOSE_ACTIVE" ]] && [[ -n "$COMPOSE_FILE" ]]; then
+        print_resource_summary "$COMPOSE_FILE"
+        echo "Cleaning up Docker Compose stack..."
+        if command -v docker &>/dev/null; then
+            (cd "$SCRIPT_DIR" && docker compose -f "$COMPOSE_FILE" down --remove-orphans 2>/dev/null) || true
+        fi
+        COMPOSE_ACTIVE=""
+        COMPOSE_FILE=""
+    fi
+}
+
+on_exit() {
+    local ec=${1:-$?}
+    [[ $ec -ne 0 ]] && echo "" && echo "ERROR: Command failed during phase: ${CURRENT_PHASE:-unknown}" >&2
+    cleanup_stacks
+}
+
+on_interrupt() {
+    echo ""
+    echo "Interrupted by user. Stack was running; resource summary below."
+    cleanup_stacks
+    exit 130
+}
+
+trap 'ec=$?; on_exit $ec' EXIT
+trap on_interrupt SIGINT SIGTERM
+trap '' ERR
 SKIP_TESTS=""
 MODE="full"
 TESTS_ONLY=""
@@ -120,7 +193,9 @@ start_minimal() {
     check_ports_available "$PORTS_MINIMAL" || fail "Required ports in use"
     phase "Starting minimal stack"
     echo "Starting minimal infrastructure (Redis, Kafka, Zipkin, Prometheus, redis_exporter)..."
-    (cd "$SCRIPT_DIR" && docker compose -f "$COMPOSE_MINIMAL" up) || fail "Docker Compose (minimal) failed"
+    COMPOSE_ACTIVE=1
+    COMPOSE_FILE="$COMPOSE_MINIMAL"
+    (cd "$SCRIPT_DIR" && docker compose -f "$COMPOSE_FILE" up) || fail "Docker Compose (minimal) failed"
 }
 
 run_tests_only() {
@@ -218,7 +293,9 @@ start_full() {
 
     phase "Starting full stack"
     echo "Starting full environment (Elasticsearch, Kibana, Kafka Connect, ELK init, microservices)..."
-    (cd "$SCRIPT_DIR" && docker compose -f "$COMPOSE_FULL" up) || fail "Docker Compose up failed"
+    COMPOSE_ACTIVE=1
+    COMPOSE_FILE="$COMPOSE_FULL"
+    (cd "$SCRIPT_DIR" && docker compose -f "$COMPOSE_FILE" up) || fail "Docker Compose up failed"
 }
 
 run_profile() {
@@ -251,7 +328,9 @@ run_profile() {
     (cd "$SCRIPT_DIR" && docker compose -f "$COMPOSE_FULL" build) || fail "Docker Compose build failed"
 
     phase "Starting stack"
-    (cd "$SCRIPT_DIR" && docker compose -f "$COMPOSE_FULL" up -d) || fail "Docker Compose up failed"
+    COMPOSE_ACTIVE=1
+    COMPOSE_FILE="$COMPOSE_FULL"
+    (cd "$SCRIPT_DIR" && docker compose -f "$COMPOSE_FILE" up -d) || fail "Docker Compose up failed"
 
     echo "Waiting for Query (8086) and Inventory (8085) to be healthy..."
     for i in $(seq 1 90); do
@@ -284,6 +363,7 @@ run_profile() {
 
     echo ""
     echo "Stack is still running. Stop with: docker compose -f $COMPOSE_FULL down"
+    SKIP_CLEANUP=1
 }
 
 parse_args "$@"
