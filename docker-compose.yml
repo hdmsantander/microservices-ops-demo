@@ -175,6 +175,7 @@ services:
     network_mode: host
     environment:
       CONNECT_BOOTSTRAP_SERVERS: localhost:9092
+      CONNECT_REST_PORT: "8084"
       CONNECT_REST_ADVERTISED_HOST_NAME: localhost
       CONNECT_GROUP_ID: connect-application-logs
       CONNECT_CONFIG_STORAGE_TOPIC: _connect-configs
@@ -193,7 +194,7 @@ services:
       elasticsearch:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -sSf http://localhost:8083/connectors 2>/dev/null || exit 1"]
+      test: ["CMD-SHELL", "curl -sSf http://localhost:8084/connectors 2>/dev/null || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5

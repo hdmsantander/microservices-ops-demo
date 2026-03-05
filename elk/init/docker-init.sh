@@ -1,10 +1,11 @@
 #!/bin/bash
 # Dockerized ELK init: create topic, register connector, provision Kibana.
-# Runs with network_mode: host to reach Kafka (9092), Connect (8083), Kibana (5601).
+# Runs with network_mode: host to reach Kafka (9092), Connect (8084), Kibana (5601).
+# Connect uses 8084 to avoid conflict with landoop/fast-data-dev built-in Connect (8083).
 set -e
 
 KAFKA_BOOTSTRAP="${KAFKA_BOOTSTRAP:-localhost:9092}"
-CONNECT_URL="${CONNECT_URL:-http://localhost:8083}"
+CONNECT_URL="${CONNECT_URL:-http://localhost:8084}"
 KIBANA_URL="${KIBANA_URL:-http://localhost:5601}"
 ES_URL="${ES_URL:-http://localhost:9200}"
 TOPIC="${TOPIC:-application-logs}"

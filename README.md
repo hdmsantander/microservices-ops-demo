@@ -93,7 +93,7 @@ flowchart TB
             ES["Elasticsearch :9200"]
             Kibana["Kibana :5601"]
         end
-        KC["Kafka Connect :8083"]
+        KC["Kafka Connect :8084"]
     end
 
     subgraph Exporters["Prometheus Exporters"]
@@ -312,7 +312,7 @@ The ELK stack provides centralized log analytics:
 |-----------|------|-------------|
 | **Elasticsearch** | 9200 | Log storage; receives logs from Kafka Connect |
 | **Kibana** | 5601 | Log search, dashboards, trace correlation |
-| **Kafka Connect** | 8083 | Elasticsearch Sink; ingests `application-logs` topic |
+| **Kafka Connect** | 8084 | Elasticsearch Sink; ingests `application-logs` topic (8084 avoids conflict with landoop Connect on 8083) |
 
 **elk-init** runs at startup to create the `application-logs` Kafka topic, register the Kafka Connect Elasticsearch Sink connector, create the Kibana data view `application-logs*`, and import any `.ndjson` dashboards from `elk/init/dashboards/`.
 

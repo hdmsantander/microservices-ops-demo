@@ -3,7 +3,7 @@
 # Run after Kafka Connect and Elasticsearch are up.
 # Usage: ./init-connector.sh [connect_url] [es_url]
 set -e
-CONNECT_URL="${1:-http://localhost:8083}"
+CONNECT_URL="${1:-http://localhost:8084}"
 ES_URL="${2:-http://localhost:9200}"
 TOPIC="${3:-application-logs}"
 

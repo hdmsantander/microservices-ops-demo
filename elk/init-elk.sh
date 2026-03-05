@@ -5,7 +5,7 @@
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BOOTSTRAP="${KAFKA_BOOTSTRAP:-localhost:9092}"
-CONNECT_URL="${CONNECT_URL:-http://localhost:8083}"
+CONNECT_URL="${CONNECT_URL:-http://localhost:8084}"
 ES_URL="${ES_URL:-http://localhost:9200}"
 
 echo "=== ELK initialization ==="

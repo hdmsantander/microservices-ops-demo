@@ -6,17 +6,20 @@ The stack includes **Elasticsearch**, **Kibana**, and **Kafka Connect** with an 
 
 ## Architecture
 
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the full Log Flow diagram.
+
 ```
 [Query / Inventory]  --kafka-logging-->  [Kafka: application-logs]
-                                                   |
-                                                   v
+       (enriched: traceId, spanId,           |
+        service, env, host, stack_trace)     v
                                     [Kafka Connect + ES Sink]
                                                    |
                                                    v
                                     [Elasticsearch] <--> [Kibana]
 ```
 
-- **Log flow**: Microservices emit structured JSON logs to Kafka when the `kafka-logging` profile is active (enabled by default in Docker Compose).
+- **Log flow**: Microservices emit enriched JSON logs to Kafka when the `kafka-logging` profile is active (enabled by default in Docker Compose).
+- **Enrichment**: LogstashLayout adds traceId, spanId, service, environment, host; errors include stack_trace. Correlate with Zipkin via `traceId`.
 - **Ingestion**: Kafka Connect Elasticsearch Sink connector consumes from `application-logs` and writes to Elasticsearch indices.
 - **Analysis**: Kibana provides Discover for ad-hoc search, Dashboards for visualizations, and trace-based correlation via `traceId`/`spanId`.
 
@@ -26,40 +29,61 @@ The stack includes **Elasticsearch**, **Kibana**, and **Kafka Connect** with an 
 |---------|------|-----|
 | Elasticsearch | 9200 | http://localhost:9200 |
 | Kibana | 5601 | http://localhost:5601 |
-| Kafka Connect REST | 8083 | http://localhost:8083 |
+| Kafka Connect REST | 8084 | http://localhost:8084 |
 
 ## Startup
 
-The full stack (`./start.sh` or `./start.sh full`) includes Elasticsearch, Kibana, and Kafka Connect. After startup:
+The full stack (`./start.sh` or `./start.sh full`) includes Elasticsearch, Kibana, Kafka Connect, and the **elk-init** service. Startup is single-threaded and blocking:
 
-1. **Topic**: `application-logs` is created automatically (or via `./elk/init-elk.sh`).
-2. **Connector**: The Elasticsearch Sink connector is registered via `./elk/init-elk.sh` (runs automatically after ~45s, or manually if needed).
-3. **Data view**: Kibana data view `application-logs*` is created by `./elk/provision-kibana.sh`.
+1. Infrastructure (Kafka, Elasticsearch, Kibana, Kafka Connect) starts and becomes healthy.
+2. **elk-init** runs: creates `application-logs` topic, registers the Elasticsearch Sink connector, provisions the Kibana data view, then exits.
+3. Query and Inventory microservices start only after elk-init completes successfully.
+4. `docker compose up` blocks on the main thread, streaming logs from all services.
 
-### Manual initialization
+The elk-init logic is Dockerized (`elk/init/`); no background scripts or manual init are required.
 
-If ELK init did not run during startup:
+### Manual initialization (non-Docker or recovery)
+
+If running without Docker or if elk-init failed:
 
 ```bash
-./elk/init-elk.sh          # Create topic, register connector
-./elk/provision-kibana.sh  # Create Kibana data view (run after first logs are ingested)
+./elk/init-elk.sh          # Create topic, register connector (requires docker exec for topic)
+./elk/provision-kibana.sh  # Create Kibana data view
 ```
 
 ## Log schema
 
-Each log document in Elasticsearch has:
+Each log document in Elasticsearch has (enriched for traceability):
 
 | Field | Type | Description |
 |-------|------|--------------|
 | `@timestamp` | date | Log timestamp (ISO8601) |
 | `level` | keyword | INFO, WARN, ERROR |
-| `logger` | keyword | Logger name |
+| `logger_name` | keyword | Logger name |
 | `message` | text | Log message |
-| `traceId` | keyword | Micrometer trace ID (correlation) |
+| `thread_name` | keyword | Thread name |
+| `traceId` | keyword | Micrometer trace ID – correlate with Zipkin |
 | `spanId` | keyword | Micrometer span ID |
+| `parentSpanId` | keyword | Parent span (when available) |
 | `service` | keyword | query-microservice or inventory-microservice |
+| `environment` | keyword | Spring profile (e.g. development) |
+| `host` | keyword | Hostname |
+| `stack_trace` | text | Exception stack (errors only) |
 
 ## Kibana dashboards
+
+### Proposed dashboards
+
+See [docs/KIBANA_DASHBOARDS_PROPOSAL.md](KIBANA_DASHBOARDS_PROPOSAL.md) for detailed proposals:
+
+- **Log Overview** – volume by service/level, errors/warnings
+- **Error & Warning Monitoring** – anomalies and top error loggers
+- **Trace Correlation** – correlate logs across services via `traceId`
+- **Log Processing** – throughput, logger distribution
+
+### Automated provisioning
+
+Place exported `.ndjson` files in `elk/init/dashboards/` and rebuild elk-init. They will be imported on stack startup.
 
 ### Basic: Log discovery
 
@@ -70,7 +94,7 @@ Each log document in Elasticsearch has:
    - `level: "ERROR"`
    - `traceId: "YOUR_TRACE_ID"` (from Zipkin)
 
-### Advanced: Create dashboards
+### Manual creation
 
 See [elk/kibana-dashboards/README.md](../elk/kibana-dashboards/README.md) for step-by-step instructions to create:
 

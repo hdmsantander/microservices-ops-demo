@@ -23,7 +23,7 @@ Review of the `start.sh` script, tests, and Docker stack for best practices. Inc
 | 9412 | Prometheus |
 | 9411 | Zipkin |
 
-*Note: Ports 8085/8086 were chosen to avoid conflict with `landoop/fast-data-dev` Schema Registry (8081), Kafka Connect (8083), and other common services.*
+*Note: Ports 8085/8086 were chosen to avoid conflict with `landoop/fast-data-dev` Schema Registry (8081), Kafka Connect (8083), and other common services. Our Kafka Connect uses port 8084 to avoid conflict with landoop's built-in Connect on 8083.*
 
 ### 2. Test Summary & Coverage
 

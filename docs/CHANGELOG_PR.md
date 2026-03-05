@@ -10,7 +10,7 @@ Summary of changes from the observability proposal implementation and ELK integr
 - **Spring Boot Admin** (port 8089) — service monitoring
 - **Config Server** (port 8888) — centralized configuration
 - **Elasticsearch** (port 9200) + **Kibana** (port 5601) — log analytics
-- **Kafka Connect** (port 8083) — Elasticsearch Sink for `application-logs` topic
+- **Kafka Connect** (port 8084) — Elasticsearch Sink for `application-logs` topic (8084 avoids conflict with landoop Connect on 8083)
 
 ## New Components
 
