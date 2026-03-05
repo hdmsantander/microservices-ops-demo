@@ -217,8 +217,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 1536M
     environment:
+      KAFKA_HEAP_OPTS: "-Xms512m -Xmx1024m"
       CONNECT_BOOTSTRAP_SERVERS: localhost:9092
       CONNECT_REST_PORT: "8084"
       CONNECT_REST_ADVERTISED_HOST_NAME: localhost

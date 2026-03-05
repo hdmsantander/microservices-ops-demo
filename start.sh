@@ -55,7 +55,7 @@ print_resource_estimate() {
         *docker-compose*)
             echo "  Full stack: ~20 containers, ~6–7 GB RAM limit"
             echo "  (Elasticsearch 1G, Kibana 1G, Kafka 1G, Grafana 512M, config/admin 512M each,"
-            echo "   query/inventory 512M each, Kafka Connect ~512M, others 64–256M)"
+            echo "   query/inventory 512M each, Kafka Connect 1.5G, others 64–256M)"
             ;;
         *)
             echo "  Run 'docker stats' for live usage."

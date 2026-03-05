@@ -14,6 +14,7 @@ This repository holds a Spring Boot OPS demo with the following components:
 - **Java 21** or higher (Java 25 supported when JDK 25 is available; set `java.version` in pom.xml)
 - **Docker** and **Docker Compose** (for running the full stack)
 - **Maven 3.8+**
+- **System resources** (full stack): ~6–7 GB RAM, ~3–5 CPU cores. Minimal stack: ~2 GB RAM.
 
 ## Quick Start
 
