@@ -13,7 +13,6 @@
 			<includeMdcKeyName>spanId</includeMdcKeyName>
 			<includeMdcKeyName>parentSpanId</includeMdcKeyName>
 			<customFields>{"service":"${appName}","environment":"${environment}","host":"${HOSTNAME:-localhost}"}</customFields>
-			<includeStacktrace>true</includeStacktrace>
 			<includeCallerData>false</includeCallerData>
 		</encoder>
 	</appender>
@@ -27,7 +26,6 @@
 					<includeMdcKeyName>spanId</includeMdcKeyName>
 					<includeMdcKeyName>parentSpanId</includeMdcKeyName>
 					<customFields>{"service":"${appName}","environment":"${environment}","host":"${HOSTNAME:-localhost}"}</customFields>
-					<includeStacktrace>true</includeStacktrace>
 					<includeCallerData>false</includeCallerData>
 				</layout>
 			</encoder>
@@ -45,8 +43,15 @@
 		</appender>
 	</springProfile>
 
-	<root level="INFO">
-		<appender-ref ref="CONSOLE"/>
-		<springProfile name="kafka-logging"><appender-ref ref="ASYNC_KAFKA"/></springProfile>
-	</root>
+	<springProfile name="!kafka-logging">
+		<root level="INFO">
+			<appender-ref ref="CONSOLE"/>
+		</root>
+	</springProfile>
+	<springProfile name="kafka-logging">
+		<root level="INFO">
+			<appender-ref ref="CONSOLE"/>
+			<appender-ref ref="ASYNC_KAFKA"/>
+		</root>
+	</springProfile>
 </configuration>
