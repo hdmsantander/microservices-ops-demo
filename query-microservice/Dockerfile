@@ -58,4 +58,4 @@ ENTRYPOINT ["java", "-jar", "application.jar"]
 
 # Readiness: use /actuator/health/readiness (Spring Boot 4) for dependency ordering
 HEALTHCHECK --interval=10s --timeout=5s --start-period=45s --retries=3 \
-    CMD-SHELL wget -q --spider http://localhost:8086/actuator/health/readiness || wget -q --spider http://localhost:8086/actuator/health || exit 1
+    CMD wget -q --spider http://localhost:8086/actuator/health/readiness || wget -q --spider http://localhost:8086/actuator/health || exit 1

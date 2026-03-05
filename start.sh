@@ -31,8 +31,6 @@ PROFILE_RATE="${PROFILE_RATE:-2}"
 PORTS_MINIMAL="6379 9092 9411 9412 9121"
 # Full stack: + Elasticsearch, Kibana, Kafka Connect (8084), landoop (3030, 8081), microservices, exporters
 PORTS_FULL="6379 8085 8086 8088 8089 9090 9092 9114 9308 9411 9412 9121 3000 5601 8084 9200 3030 8081"
-# Tests-only: exclude 9090 (gRPC) and full-stack ports; avoids failure when 9090 is used by another process
-PORTS_TESTS="6379 9092 9411 9412 9121"
 
 # Maven command: use wrapper (./mvnw) only in cloud env or when --mvnw; default mvn
 USE_MVNW="${USE_MVNW:-}"
@@ -145,7 +143,7 @@ run_tests_only() {
     (print_coverage_summary 2>/dev/null || true) && \
     echo "" && \
     echo "Verifying ports are free after tests (no stray processes)..." && \
-    check_ports_available "$PORTS_TESTS" && echo "Ports OK." || fail "Ports in use after tests"
+    check_ports_available "$PORTS_FULL" && echo "Ports OK." || fail "Ports in use after tests"
 }
 
 print_test_summary() {

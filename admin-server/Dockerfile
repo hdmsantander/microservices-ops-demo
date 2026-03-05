@@ -44,4 +44,4 @@ EXPOSE 8089
 ENTRYPOINT ["java", "-jar", "application.jar"]
 
 HEALTHCHECK --interval=10s --timeout=5s --start-period=25s --retries=3 \
-    CMD-SHELL wget -q --spider http://localhost:8089/actuator/health/readiness || wget -q --spider http://localhost:8089/actuator/health || exit 1
+    CMD wget -q --spider http://localhost:8089/actuator/health/readiness || wget -q --spider http://localhost:8089/actuator/health || exit 1
