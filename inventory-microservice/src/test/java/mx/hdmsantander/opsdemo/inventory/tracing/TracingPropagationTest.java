@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.micrometer.tracing.Tracer;
+import mx.hdmsantander.opsdemo.inventory.InventoryApplication;
 import mx.hdmsantander.opsdemo.inventory.service.InventoryService;
 import mx.hdmsantander.opsdemo.inventory.service.OrderService;
 
@@ -31,7 +32,7 @@ import mx.hdmsantander.opsdemo.inventory.service.OrderService;
  * Uses HTTP transport for Zipkin (no Kafka client) and SAME_THREAD execution.
  * Uses embedded Kafka for Spring Cloud Stream (no external Kafka required).
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(classes = InventoryApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestRestTemplate
 @ActiveProfiles("test")
 @Execution(ExecutionMode.SAME_THREAD)
