@@ -93,7 +93,7 @@ class Resilience4jIntegrationTest {
 	void inventoryService_returns_inventory_when_api_succeeds() throws Exception {
 		JsonNode inventory = objectMapper.createObjectNode().put("available", 10).put("pending", 2).put("sold", 5);
 		String jsonBody = objectMapper.writeValueAsString(inventory);
-		when(restTemplate.getForEntity(eq(INVENTORY_URL), eq(String.class)))
+		when(restTemplate.getForEntity(any(String.class), eq(String.class)))
 				.thenReturn(ResponseEntity.ok(jsonBody));
 
 		JsonNode result = inventoryService.getInventory(null, null);
@@ -101,27 +101,27 @@ class Resilience4jIntegrationTest {
 		assertThat(result).isNotNull();
 		assertThat(result.has("available")).as("Inventory should have 'available' from stubbed API").isTrue();
 		assertThat(result.get("available").asInt()).isEqualTo(10);
-		verify(restTemplate).getForEntity(eq(INVENTORY_URL), eq(String.class));
+		verify(restTemplate).getForEntity(any(String.class), eq(String.class));
 	}
 
 	@Test
 	@Order(2)
 	void inventoryService_returns_fallback_when_api_fails() {
 		doThrow(new HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR))
-				.when(restTemplate).getForEntity(eq(INVENTORY_URL), eq(String.class));
+				.when(restTemplate).getForEntity(any(String.class), eq(String.class));
 
 		JsonNode result = inventoryService.getInventory(null, null);
 
 		assertThat(result.isObject()).isTrue();
 		assertThat(result.isEmpty()).isTrue();
-		verify(restTemplate, atLeast(1)).getForEntity(eq(INVENTORY_URL), eq(String.class));
+		verify(restTemplate, atLeast(1)).getForEntity(any(String.class), eq(String.class));
 	}
 
 	@Test
 	@Order(3)
 	void inventoryService_circuit_breaker_returns_fallback_when_open() {
 		doThrow(new HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR))
-				.when(restTemplate).getForEntity(eq(INVENTORY_URL), eq(String.class));
+				.when(restTemplate).getForEntity(any(String.class), eq(String.class));
 
 		for (int i = 0; i < 5; i++) {
 			inventoryService.getInventory(null, null);

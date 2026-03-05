@@ -2,7 +2,7 @@
 
 ## Overview
 
-The project uses **JUnit 5**, **Mockito**, **MockMvc**, **EmbeddedKafka**, and **AssertJ** for unit and integration tests. Minimum 80% code coverage is targeted for services and controllers.
+The project uses **JUnit 5**, **Mockito**, **MockMvc**, **EmbeddedKafka**, and **AssertJ** for unit and integration tests. **Minimum 80% instruction coverage** is enforced via JaCoCo `check` goal in both microservices. Build fails if coverage drops below 80%. Current: Query ~86%, Inventory ~82%.
 
 ## Test Categories
 
@@ -42,7 +42,7 @@ The project uses **JUnit 5**, **Mockito**, **MockMvc**, **EmbeddedKafka**, and *
 
 ## Test Configuration
 
-- **application-test.yml**: Disables Redis, scheduling, admin client; `inventory.grpc.enabled: false` so tests use REST.
+- **application-test.yml**: Disables Config Server (`spring.cloud.config.enabled: false`), Redis, scheduling, admin client; `grpc.server.port: -1` (Inventory) so tests use REST.
 - **EmbeddedKafka**: All integration tests use `@EmbeddedKafka` for Kafka-backed Spring Cloud Stream.
 
 ## Running Tests
@@ -59,6 +59,10 @@ cd inventory-microservice && ./mvnw test
 ./mvnw test -Dtest=MainControllerTest
 ```
 
+## Load Testing (Profiling)
+
+The `profiling` module uses **Gatling** for HTTP load testing. Run via `./start.sh profile` (starts stack + load test) or `cd profiling && ./run.sh 60 2` when the stack is already running. See [PROFILING.md](PROFILING.md).
+
 ## gRPC Testing
 
 - **Unit**: `InventoryGrpcServiceTest` (inventory) and `InventoryGrpcClientTest` (query) test gRPC adapter logic with mocks.
@@ -67,6 +71,7 @@ cd inventory-microservice && ./mvnw test
 ## Key Test Patterns
 
 - **MockMvc standaloneSetup**: Controllers tested in isolation with mocked services.
+- **any(String.class) for RestTemplate URL**: Resilience4jIntegrationTest uses `any(String.class)` for getForEntity URL to avoid matcher conflicts with AOP proxies.
 - **ReflectionTestUtils**: Inject mocks when `@Autowired` or constructor injection not used.
 - **@Order / TestMethodOrder**: Resilience4j tests require ordered execution for circuit breaker state.
 - **@DirtiesContext**: Inventory Resilience4j uses it for circuit breaker reset.

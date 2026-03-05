@@ -138,7 +138,7 @@ cd inventory-microservice && ./mvnw test
 ./mvnw verify
 ```
 
-See [docs/TESTING.md](docs/TESTING.md) for test categories and gRPC testing notes. See [docs/IMPROVEMENT_REPORT.md](docs/IMPROVEMENT_REPORT.md) for future improvements. See [docs/SCHEMA_REGISTRY_EUREKA_CONFIG_PROPOSAL.md](docs/SCHEMA_REGISTRY_EUREKA_CONFIG_PROPOSAL.md) for evaluation of Schema Registry, Eureka, and Spring Config Server.
+See [docs/TESTING.md](docs/TESTING.md) for test categories and gRPC testing notes. See [docs/CHANGELOG_PR.md](docs/CHANGELOG_PR.md) for a summary of observability and ELK changes. See [docs/IMPROVEMENT_REPORT.md](docs/IMPROVEMENT_REPORT.md) for future improvements. See [docs/SCHEMA_REGISTRY_EUREKA_CONFIG_PROPOSAL.md](docs/SCHEMA_REGISTRY_EUREKA_CONFIG_PROPOSAL.md) for evaluation of Schema Registry, Eureka, and Spring Config Server.
 
 ## Profiling and Load Testing
 
@@ -311,14 +311,14 @@ The stack uses `landoop/fast-data-dev`, which includes Kafka, Zookeeper, Schema 
 
 ### Local Coverage
 
-Run tests with coverage and generate the HTML report:
+Run tests with coverage (enforces **80% minimum** instruction coverage via JaCoCo check):
 
 ```bash
 # Query microservice
-mvn verify -f query-microservice/pom.xml
+./mvnw verify -f query-microservice/pom.xml
 
 # Inventory microservice
-mvn verify -f inventory-microservice/pom.xml
+./mvnw verify -f inventory-microservice/pom.xml
 ```
 
-Reports are written to `target/site/jacoco/index.html` in each microservice directory.
+Reports are written to `target/site/jacoco/index.html` in each microservice directory. Build fails if coverage drops below 80%.
