@@ -1,7 +1,6 @@
 # Docker Compose - Minimal infrastructure (Kafka, Redis, Zipkin, Prometheus)
 # Startup order: redis, kafka -> redis-exporter, zipkin -> prometheus
-
-version: '3.9'
+# Note: 'version' is obsolete in Compose V2, omitted to avoid warnings
 
 services:
   redis:

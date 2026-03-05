@@ -1,7 +1,6 @@
 # Docker Compose - Full stack with dependency ordering and health checks
 # Startup order: infra (redis,kafka,es) -> config -> exporters -> observability -> elk -> microservices
-
-version: '3.9'
+# Note: 'version' is obsolete in Compose V2, omitted to avoid warnings
 
 services:
   # === Layer 1: Infrastructure (no deps) ===

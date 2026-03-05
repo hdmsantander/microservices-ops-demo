@@ -23,7 +23,7 @@ This repository holds a Spring Boot OPS demo with the following components:
 ./start.sh
 ```
 
-This script packages Config Server, both microservices, and Admin Server, builds Docker images, and starts the entire stack (Config Server, Kafka, Zipkin, Prometheus, Grafana, Elasticsearch, Kibana, Kafka Connect, Admin, and both microservices).
+This script runs in phases: **Building** (Maven package), **Port check**, **Building Docker images** (including elk-init, kafka-connect), and **Starting full stack**. Errors report the failed phase. It packages Config Server, both microservices, and Admin Server, builds Docker images, and starts the entire stack (Config Server, Kafka, Zipkin, Prometheus, Grafana, Elasticsearch, Kibana, Kafka Connect, elk-init, Admin, and both microservices).
 
 ### Start infrastructure only (Kafka, Zipkin, Prometheus)
 
@@ -55,69 +55,88 @@ cd query-microservice && ./mvnw spring-boot:run
 
 Config Server is optional: if not running, services use local `application.yml`.
 
-See [docs/DOCKER.md](docs/DOCKER.md) for container best practices, startup ordering, and health checks.
+See [docs/DOCKER.md](docs/DOCKER.md) for container best practices, startup ordering, and health checks. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for detailed flow diagrams (Docker startup, pet adoption, order sync, log flow, trace correlation).
 
 ## Architecture & Event Flow
 
 ```mermaid
 flowchart TB
-    subgraph External["External Services"]
-        PetStore["Pet Store API<br/>(petstore.swagger.io)"]
+    subgraph External["External APIs"]
+        PetStore["Pet Store API<br/>petstore.swagger.io"]
     end
 
     subgraph Config["Configuration"]
-        ConfigServer["Config Server<br/>:8888"]
+        ConfigServer["Config Server :8888"]
     end
 
     subgraph Microservices["Microservices"]
-        Query["Query Service<br/>:8086<br/>• GET /v1/pets<br/>• POST /v1/pets/:id/reserve<br/>• POST /v1/pets/:id/adopt<br/>• GET /v1/orders<br/>• GET /v1/inventory"]
-        Inventory["Inventory Service<br/>:8085, :9090<br/>• GET /v1/inventory<br/>• GET /v1/order/:id<br/>• gRPC (internal)"]
-        Admin["Admin Server :8089"]
+        Query["Query :8086"]
+        Inventory["Inventory :8085, :9090 gRPC"]
+        Admin["Admin :8089"]
     end
 
-    ConfigServer -.->|config| Query
-    ConfigServer -.->|config| Inventory
-    ConfigServer -.->|config| Admin
-
-    subgraph Kafka["Apache Kafka :9092"]
-        direction TB
-        OE["order-events-v1"]
-        AE["adoption-events-v1"]
-        ACE["adoption-congratulation-events-v1"]
-        ZipkinTopic["zipkin (traces)"]
-        AppLogs["application-logs"]
+    subgraph Data["Data"]
+        Redis["Redis :6379"]
+        subgraph Kafka["Kafka :9092"]
+            OE["order-events-v1"]
+            AE["adoption-events-v1"]
+            ZipkinTopic["zipkin"]
+            AppLogs["application-logs"]
+        end
     end
 
     subgraph Observability["Observability"]
-        Zipkin["Zipkin<br/>:9411<br/>Tracing"]
-        Prometheus["Prometheus<br/>:9412<br/>Metrics"]
-        Kibana["Kibana<br/>:5601<br/>Logs"]
+        Zipkin["Zipkin :9411"]
+        Prometheus["Prometheus :9412"]
+        Grafana["Grafana :3000"]
+        subgraph ELK["Log Analytics"]
+            ES["Elasticsearch :9200"]
+            Kibana["Kibana :5601"]
+        end
+        KC["Kafka Connect :8083"]
     end
 
-    PetStore <-->|HTTP| Query
-    PetStore <-->|HTTP| Inventory
-    Query <-->|gRPC/REST| Inventory
+    subgraph Exporters["Prometheus Exporters"]
+        RE["redis :9121"]
+        EE["elasticsearch :9114"]
+        KE["kafka :9308"]
+    end
 
-    Inventory -->|produce| OE
-    OE -->|consume| Query
-    Query -->|produce| AE
-    AE -->|consume| Inventory
-    Inventory -->|produce| ACE
+    ConfigServer -.-> Query
+    ConfigServer -.-> Inventory
+    ConfigServer -.-> Admin
 
-    Query -->|traces| ZipkinTopic
-    Inventory -->|traces| ZipkinTopic
-    ZipkinTopic -->|consume| Zipkin
-    Query -->|logs| AppLogs
-    Inventory -->|logs| AppLogs
-    AppLogs -.->|Kafka Connect| Kibana
+    PetStore <--> Query
+    PetStore <--> Inventory
+    Query <--> Inventory
+    Query --> Redis
 
-    Prometheus -->|scrape /actuator/prometheus| Query
-    Prometheus -->|scrape /actuator/prometheus| Inventory
-    Prometheus -->|scrape /actuator/prometheus| ConfigServer
-    Prometheus -->|scrape /actuator/prometheus| Admin
+    Inventory --> OE
+    OE --> Query
+    Query --> AE
+    AE --> Inventory
+
+    Query --> ZipkinTopic
+    Inventory --> ZipkinTopic
+    ZipkinTopic --> Zipkin
+
+    Query --> AppLogs
+    Inventory --> AppLogs
+    AppLogs --> KC
+    KC --> ES
+    ES <--> Kibana
+
+    Prometheus --> Query
+    Prometheus --> Inventory
+    Prometheus --> Admin
+    Prometheus --> ConfigServer
+    Prometheus --> RE
+    Prometheus --> EE
+    Prometheus --> KE
+    Prometheus --> Grafana
 ```
 
-> **Note:** Microservices send traces to Zipkin via Kafka (`zipkin` topic). Zipkin consumes from Kafka. Configure `management.tracing.export.zipkin.kafka.bootstrap-servers`.
+> **Note:** Traces go to Zipkin via Kafka (`zipkin` topic). Logs are enriched with traceId/spanId and flow to `application-logs` → Kafka Connect → Elasticsearch → Kibana for trace correlation.
 
 ### Kafka Topics
 
@@ -127,7 +146,7 @@ flowchart TB
 | `adoption-events-v1`                | Query            | Inventory  | Pet adoption events              |
 | `adoption-congratulation-events-v1` | Inventory        | (external) | Adoption confirmation events     |
 | `zipkin`                            | Query, Inventory | Zipkin     | Distributed traces               |
-| `application-logs`                 | Query, Inventory | Kafka Connect → Elasticsearch | Structured JSON logs for Kibana |
+| `application-logs`                 | Query, Inventory | Kafka Connect → Elasticsearch | Enriched JSON logs (traceId, service) for Kibana |
 
 ## Running Tests
 
@@ -140,7 +159,21 @@ cd inventory-microservice && ./mvnw test
 ./mvnw verify
 ```
 
-See [docs/TESTING.md](docs/TESTING.md) for test categories and gRPC testing notes. See [docs/CHANGELOG_PR.md](docs/CHANGELOG_PR.md) for a summary of observability and ELK changes. See [docs/IMPROVEMENT_REPORT.md](docs/IMPROVEMENT_REPORT.md) for future improvements. See [docs/SCHEMA_REGISTRY_EUREKA_CONFIG_PROPOSAL.md](docs/SCHEMA_REGISTRY_EUREKA_CONFIG_PROPOSAL.md) for evaluation of Schema Registry, Eureka, and Spring Config Server.
+See [docs/TESTING.md](docs/TESTING.md) for test categories and gRPC testing notes.
+
+### Documentation Index
+
+| Doc | Topic |
+|-----|-------|
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System diagrams, Docker startup, pet adoption, order sync, log flow, trace correlation |
+| [CHANGELOG_PR.md](docs/CHANGELOG_PR.md) | Observability and ELK changes summary |
+| [DOCKER.md](docs/DOCKER.md) | Container best practices, startup order |
+| [ELK_LOGGING.md](docs/ELK_LOGGING.md) | Elasticsearch, Kibana, log schema |
+| [LOGGING_KAFKA.md](docs/LOGGING_KAFKA.md) | Log distribution, trace enrichment |
+| [CONFIG_SERVER.md](docs/CONFIG_SERVER.md) | Centralized configuration |
+| [GRPC_IMPLEMENTATION.md](docs/GRPC_IMPLEMENTATION.md) | gRPC for Query ↔ Inventory |
+| [PROFILING.md](docs/PROFILING.md) | Load testing with Gatling |
+| [IMPROVEMENT_REPORT.md](docs/IMPROVEMENT_REPORT.md) | Future improvements |
 
 ## Profiling and Load Testing
 
@@ -177,7 +210,7 @@ Query syncs with Inventory via **gRPC** (port 9090) when `inventory.grpc.enabled
 - **Tracing**: Traces are sent to Zipkin via Kafka by default. Set `management.tracing.export.zipkin.transport: kafka` (default) or `http`. For Kafka: `kafka.bootstrap-servers` (default: `localhost:9092`), `kafka.topic` (default: `zipkin`). For HTTP: set `transport: http` and `endpoint: http://localhost:9411/api/v2/spans`.
 - **Spring Cloud 2025.1.0**: Required for Spring Boot 4.0.3 compatibility.
 - **Kafka JSON (Spring Kafka 4.x)**: Uses `JacksonJsonDeserializer` and `JacksonJsonSerializer`. Configure via binder-level `consumer-properties` and `producer-properties` (not bindings-level). Use bracket notation for dotted keys, e.g. `"[value.deserializer]"`, `"[spring.json.trusted.packages]"`, `"[spring.json.value.default.type]"`.
-- **Log distribution to Kafka**: Enabled by default in Docker (`kafka-logging` profile). Structured JSON logs (traceId/spanId) flow to `application-logs` → Kafka Connect → Elasticsearch → Kibana. See [docs/LOGGING_KAFKA.md](docs/LOGGING_KAFKA.md) and [docs/ELK_LOGGING.md](docs/ELK_LOGGING.md).
+- **Log distribution to Kafka**: Enabled by default in Docker (`kafka-logging` profile). Logs are enriched with traceId, spanId, service, environment, host, and stack traces for errors. Flow: `application-logs` → Kafka Connect → Elasticsearch → Kibana. Use `traceId` in Kibana to correlate with Zipkin traces. See [docs/LOGGING_KAFKA.md](docs/LOGGING_KAFKA.md) and [docs/ELK_LOGGING.md](docs/ELK_LOGGING.md).
 
 ## Query microservice
 
@@ -224,6 +257,10 @@ Grafana is accessible at [http://localhost:3000](http://localhost:3000) (admin/a
 - **Pet Shop Overview** – Ecosystem health (Redis, Kafka, Elasticsearch, Prometheus targets), adoptions, reservations, orders, reservation conflicts, query rates, latencies (pet, adoption, inventory, orders live/refresh/get). Links to Infrastructure dashboard.
 - **Infrastructure** – Redis, Elasticsearch (cluster status, nodes, docs, shards, index store), Kafka (brokers, consumer lag, producer rate), Spring Boot (JVM heap, HTTP rate & latency), Prometheus (targets up/down, scrape duration)
 
+### Adding dashboards
+
+Dashboards are provisioned from `grafana/provisioning/dashboards/default/`. Modify the JSON files or add new ones to extend.
+
 ### Example of metrics reported
 
 Here are some examples of the metrics registered.
@@ -267,9 +304,27 @@ void registerGauge() {
 
 ![Orders updated](.img/10.png)
 
-## Kibana (Elasticsearch logs)
+## ELK Stack (Elasticsearch, Kibana, Kafka Connect)
 
-Kibana is accessible at [http://localhost:5601](http://localhost:5601). Use **Discover** to search logs from Query and Inventory. Logs are ingested from the `application-logs` Kafka topic via Kafka Connect. See [docs/KIBANA_DASHBOARDS_PROPOSAL.md](docs/KIBANA_DASHBOARDS_PROPOSAL.md) for proposed dashboards (Log Overview, Error Monitoring, Trace Correlation, Log Processing). Export dashboards from Kibana and place `.ndjson` in `elk/init/dashboards/` for auto-import on startup. See [docs/ELK_LOGGING.md](docs/ELK_LOGGING.md) for setup.
+The ELK stack provides centralized log analytics:
+
+| Component | Port | Description |
+|-----------|------|-------------|
+| **Elasticsearch** | 9200 | Log storage; receives logs from Kafka Connect |
+| **Kibana** | 5601 | Log search, dashboards, trace correlation |
+| **Kafka Connect** | 8083 | Elasticsearch Sink; ingests `application-logs` topic |
+
+**elk-init** runs at startup to create the `application-logs` Kafka topic, register the Kafka Connect Elasticsearch Sink connector, create the Kibana data view `application-logs*`, and import any `.ndjson` dashboards from `elk/init/dashboards/`.
+
+### Kibana
+
+Kibana is accessible at [http://localhost:5601](http://localhost:5601).
+
+- **Discover**: Search logs from Query and Inventory. Filter by `service`, `level`, `traceId`, etc.
+- **Dashboards**: A **Log Overview** dashboard is auto-imported from `elk/init/dashboards/log-overview.ndjson`. Add more dashboards (Error Monitoring, Trace Correlation) by exporting from Kibana and placing `.ndjson` in `elk/init/dashboards/`.
+- **Trace correlation**: Copy a `traceId` from Zipkin (http://localhost:9411) and filter in Kibana Discover to see logs across services.
+
+See [docs/KIBANA_DASHBOARDS_PROPOSAL.md](docs/KIBANA_DASHBOARDS_PROPOSAL.md) for proposed designs. See [docs/ELK_LOGGING.md](docs/ELK_LOGGING.md) for setup.
 
 ## Zipkin server
 

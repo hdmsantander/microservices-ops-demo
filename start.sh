@@ -4,6 +4,22 @@ set -e
 
 COMPOSE_MINIMAL="docker-compose-minimal.yml"
 COMPOSE_FULL="docker-compose.yml"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CURRENT_PHASE=""
+
+phase() {
+    CURRENT_PHASE="$1"
+    echo ""
+    echo "=== Phase: $CURRENT_PHASE ==="
+}
+
+fail() {
+    echo ""
+    echo "ERROR [$CURRENT_PHASE]: $1" >&2
+    exit 1
+}
+
+trap '[[ $? -ne 0 ]] && echo "" && echo "ERROR: Command failed during phase: ${CURRENT_PHASE:-unknown}" >&2' ERR
 SKIP_TESTS=""
 MODE="full"
 TESTS_ONLY=""
@@ -13,7 +29,7 @@ PROFILE_RATE="${PROFILE_RATE:-2}"
 
 # Ports required by Docker stack (+ Elasticsearch:9200, Kibana:5601, Kafka Connect:8083)
 PORTS_MINIMAL="6379 9092 9411 9412 9121"
-PORTS_FULL="6379 8085 8086 8088 8089 9090 9092 9411 9412 9121 3000 5601 8083 9200"
+PORTS_FULL="6379 8085 8086 8088 8089 9090 9092 9114 9308 9411 9412 9121 3000 5601 8083 9200"
 
 # Maven command: use wrapper (./mvnw) only in cloud env or when --mvnw; default mvn
 USE_MVNW="${USE_MVNW:-}"
@@ -98,18 +114,21 @@ parse_args() {
 }
 
 start_minimal() {
+    phase "Port check"
     echo "Checking required ports are available..."
-    check_ports_available "$PORTS_MINIMAL"
+    check_ports_available "$PORTS_MINIMAL" || fail "Required ports in use"
+    phase "Starting minimal stack"
     echo "Starting minimal infrastructure (Redis, Kafka, Zipkin, Prometheus, redis_exporter)..."
-    docker compose -f "$COMPOSE_MINIMAL" up
+    (cd "$SCRIPT_DIR" && docker compose -f "$COMPOSE_MINIMAL" up) || fail "Docker Compose (minimal) failed"
 }
 
 run_tests_only() {
+    phase "Testing"
     local mvn_q="$(get_mvn query-microservice)"
     local mvn_i="$(get_mvn inventory-microservice)"
     echo "Running tests and coverage for microservices..."
-    (cd query-microservice && $mvn_q -q verify) && \
-    (cd inventory-microservice && $mvn_i -q verify) && \
+    (cd "$SCRIPT_DIR/query-microservice" && $mvn_q -q verify) || fail "Query microservice tests failed"
+    (cd "$SCRIPT_DIR/inventory-microservice" && $mvn_i -q verify) || fail "Inventory microservice tests failed"
     echo "" && \
     echo "All tests passed!" && \
     echo "" && \
@@ -123,11 +142,12 @@ run_tests_only() {
     (print_coverage_summary 2>/dev/null || true) && \
     echo "" && \
     echo "Verifying ports are free after tests (no stray processes)..." && \
-    check_ports_available "$PORTS_FULL" && echo "Ports OK."
+    check_ports_available "$PORTS_FULL" && echo "Ports OK." || fail "Ports in use after tests"
 }
 
 print_test_summary() {
-    for dir in query-microservice inventory-microservice; do
+    for name in query-microservice inventory-microservice; do
+        dir="$SCRIPT_DIR/$name"
         report_dir="${dir}/target/surefire-reports"
         if [[ ! -d "$report_dir" ]]; then
             continue
@@ -136,7 +156,7 @@ print_test_summary() {
         if [[ ! -e "${reports[0]}" ]]; then
             continue
         fi
-        awk -v d="${dir}" '
+        awk -v name="${name}" '
             /<testsuite/ {
                 t = f = e = s = 0
                 if (match($0, /tests="[0-9]+/)) t = substr($0, RSTART+7, RLENGTH-7)+0
@@ -149,15 +169,15 @@ print_test_summary() {
                 skipped += s
             }
             END {
-                if (NR > 0) printf "  %s: Tests run: %d, Failures: %d, Errors: %d, Skipped: %d\n", d, tests, failures, errors, skipped
+                if (NR > 0) printf "  %s: Tests run: %d, Failures: %d, Errors: %d, Skipped: %d\n", name, tests, failures, errors, skipped
             }
         ' "${reports[@]}" 2>/dev/null
     done
 }
 
 print_coverage_summary() {
-    for dir in query-microservice inventory-microservice; do
-        csv="${dir}/target/site/jacoco/jacoco.csv"
+    for name in query-microservice inventory-microservice; do
+        csv="$SCRIPT_DIR/${name}/target/site/jacoco/jacoco.csv"
         if [[ -f "$csv" ]]; then
             sum=$(awk -F',' 'NR>1 {im+=$4; ic+=$5} END {print im+0, ic+0}' "$csv")
             missed=$(echo "$sum" | cut -d' ' -f1)
@@ -165,7 +185,7 @@ print_coverage_summary() {
             total=$((missed + covered))
             if [[ $total -gt 0 ]]; then
                 pct=$(( (covered * 100) / total ))
-                echo "  ${dir}: ${covered}/${total} instructions (${pct}%)"
+                echo "  ${name}: ${covered}/${total} instructions (${pct}%)"
             fi
         fi
     done
@@ -176,21 +196,28 @@ start_full() {
     local mvn_i="$(get_mvn inventory-microservice)"
     local mvn_a="$(get_mvn admin-server)"
     local mvn_c="$(get_mvn config-server)"
+
+    phase "Building"
     echo "Packaging microservices..."
-    (cd inventory-grpc-api && $mvn_i -q -f pom.xml install -DskipTests) && \
-    (cd config-server && $mvn_c -q package -DskipTests) && \
-    (cd query-microservice && $mvn_q -q package ${SKIP_TESTS}) && \
-    (cd inventory-microservice && $mvn_i -q package ${SKIP_TESTS}) && \
-    (cd admin-server && $mvn_a -q package -DskipTests) && \
-    echo "Success building sources! Checking required ports before Docker..." && \
-    check_ports_available "$PORTS_FULL" && \
-    echo "Starting full environment (including Elasticsearch, Kibana, Kafka Connect)..." && \
-    docker compose -f "$COMPOSE_FULL" build && \
-    docker compose -f "$COMPOSE_FULL" up -d && \
-    echo "" && \
-    echo "Waiting for Kafka Connect (for ELK log ingestion)..." && \
-    (sleep 45 && ./elk/init-elk.sh 2>/dev/null || echo "ELK init deferred (run ./elk/init-elk.sh manually when ready)") & \
-    docker compose -f "$COMPOSE_FULL" logs -f
+    (cd "$SCRIPT_DIR/inventory-grpc-api" && $mvn_i -q -f pom.xml install -DskipTests) || fail "inventory-grpc-api build failed"
+    (cd "$SCRIPT_DIR/config-server" && $mvn_c -q package -DskipTests) || fail "Config Server build failed"
+    (cd "$SCRIPT_DIR/query-microservice" && $mvn_q -q package ${SKIP_TESTS}) || fail "Query microservice build failed"
+    (cd "$SCRIPT_DIR/inventory-microservice" && $mvn_i -q package ${SKIP_TESTS}) || fail "Inventory microservice build failed"
+    (cd "$SCRIPT_DIR/admin-server" && $mvn_a -q package -DskipTests) || fail "Admin Server build failed"
+    echo "Build successful."
+
+    phase "Port check"
+    echo "Checking required ports before Docker..."
+    check_ports_available "$PORTS_FULL" || fail "Required ports in use"
+
+    phase "Building Docker images"
+    echo "Building Docker images (including elk-init, kafka-connect, microservices)..."
+    [[ -d "$SCRIPT_DIR/elk/init" ]] || fail "elk/init directory not found. Ensure the repository structure is complete."
+    (cd "$SCRIPT_DIR" && docker compose -f "$COMPOSE_FULL" build) || fail "Docker Compose build failed"
+
+    phase "Starting full stack"
+    echo "Starting full environment (Elasticsearch, Kibana, Kafka Connect, ELK init, microservices)..."
+    (cd "$SCRIPT_DIR" && docker compose -f "$COMPOSE_FULL" up) || fail "Docker Compose up failed"
 }
 
 run_profile() {
@@ -207,16 +234,23 @@ run_profile() {
     echo "4. Generating report..."
     echo ""
 
-    check_ports_available "$PORTS_FULL"
+    phase "Port check"
+    check_ports_available "$PORTS_FULL" || fail "Required ports in use"
+
+    phase "Building"
     echo "Packaging microservices..."
-    (cd inventory-grpc-api && $mvn_i -q -f pom.xml install -DskipTests) && \
-    (cd config-server && $mvn_c -q package -DskipTests) && \
-    (cd query-microservice && $mvn_q -q package ${SKIP_TESTS}) && \
-    (cd inventory-microservice && $mvn_i -q package ${SKIP_TESTS}) && \
-    (cd admin-server && $mvn_a -q package -DskipTests) && \
-    echo "Success building sources!" && \
-    docker compose -f "$COMPOSE_FULL" build && \
-    docker compose -f "$COMPOSE_FULL" up -d
+    (cd "$SCRIPT_DIR/inventory-grpc-api" && $mvn_i -q -f pom.xml install -DskipTests) || fail "inventory-grpc-api build failed"
+    (cd "$SCRIPT_DIR/config-server" && $mvn_c -q package -DskipTests) || fail "Config Server build failed"
+    (cd "$SCRIPT_DIR/query-microservice" && $mvn_q -q package ${SKIP_TESTS}) || fail "Query microservice build failed"
+    (cd "$SCRIPT_DIR/inventory-microservice" && $mvn_i -q package ${SKIP_TESTS}) || fail "Inventory microservice build failed"
+    (cd "$SCRIPT_DIR/admin-server" && $mvn_a -q package -DskipTests) || fail "Admin Server build failed"
+    echo "Build successful."
+
+    phase "Building Docker images"
+    (cd "$SCRIPT_DIR" && docker compose -f "$COMPOSE_FULL" build) || fail "Docker Compose build failed"
+
+    phase "Starting stack"
+    (cd "$SCRIPT_DIR" && docker compose -f "$COMPOSE_FULL" up -d) || fail "Docker Compose up failed"
 
     echo "Waiting for Query (8086) and Inventory (8085) to be healthy..."
     for i in $(seq 1 90); do
@@ -226,19 +260,20 @@ run_profile() {
             break
         fi
         sleep 2
-        [[ $i -eq 90 ]] && { echo "Timeout waiting for services."; docker compose -f "$COMPOSE_FULL" logs --tail=50; exit 1; }
+        [[ $i -eq 90 ]] && { phase "Waiting for services"; fail "Timeout waiting for Query/Inventory. Run: docker compose -f $COMPOSE_FULL logs --tail=50"; }
     done
 
     sleep 5
 
+    phase "Load testing"
     echo ""
     echo "Running Gatling load test..."
-    (cd profiling && $mvn_p -q test-compile gatling:test \
+    (cd "$SCRIPT_DIR/profiling" && $mvn_p -q test-compile gatling:test \
         -Dgatling.simulationClass=mx.hdmsantander.opsdemo.profiling.PetShopSimulation \
         -Dprofiling.duration.sec="$PROFILE_DURATION" \
         -Dprofiling.users="$PROFILE_RATE")
 
-    REPORT_DIR="$(ls -td profiling/target/gatling/petshopsimulation-* 2>/dev/null | head -1)"
+    REPORT_DIR="$(ls -td "$SCRIPT_DIR/profiling/target/gatling/petshopsimulation-"* 2>/dev/null | head -1)"
     if [[ -n "$REPORT_DIR" && -f "$REPORT_DIR/index.html" ]]; then
         echo ""
         echo "=== Profiling complete ==="
