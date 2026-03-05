@@ -68,9 +68,10 @@ cleanup_stacks() {
     [[ -n "$SKIP_CLEANUP" ]] && return 0
     if [[ -n "$COMPOSE_ACTIVE" ]] && [[ -n "$COMPOSE_FILE" ]]; then
         print_resource_summary "$COMPOSE_FILE"
-        echo "Cleaning up Docker Compose stack..."
+        echo "Stopping Docker Compose services..."
         if command -v docker &>/dev/null; then
-            (cd "$SCRIPT_DIR" && docker compose -f "$COMPOSE_FILE" down --remove-orphans 2>/dev/null) || true
+            (cd "$SCRIPT_DIR" && docker compose -f "$COMPOSE_MINIMAL" down --remove-orphans) || true
+            (cd "$SCRIPT_DIR" && docker compose -f "$COMPOSE_FULL" down --remove-orphans) || true
         fi
         COMPOSE_ACTIVE=""
         COMPOSE_FILE=""
@@ -81,6 +82,8 @@ on_exit() {
     local ec=${1:-$?}
     [[ $ec -ne 0 ]] && echo "" && echo "ERROR: Command failed during phase: ${CURRENT_PHASE:-unknown}" >&2
     cleanup_stacks
+    trap - EXIT
+    exit "$ec"
 }
 
 on_interrupt() {
