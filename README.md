@@ -321,7 +321,7 @@ The ELK stack provides centralized log analytics:
 Kibana is accessible at [http://localhost:5601](http://localhost:5601).
 
 - **Discover**: Search logs from Query and Inventory. Filter by `service`, `level`, `traceId`, etc.
-- **Dashboards**: A **Log Overview** dashboard is auto-imported from `elk/init/dashboards/log-overview.ndjson`. Add more dashboards (Error Monitoring, Trace Correlation) by exporting from Kibana and placing `.ndjson` in `elk/init/dashboards/`.
+- **Dashboards**: Six dashboards are auto-imported from `elk/init/dashboards/`: Log Overview, Logs by Service & Level, Error & Warning Monitoring, Trace Correlation, Log Operations, Microservices Log Health. Each is a shell—add panels via Lens using the `application-logs*` data view. See [elk/kibana-dashboards/README.md](elk/kibana-dashboards/README.md) for panel configuration.
 - **Trace correlation**: Copy a `traceId` from Zipkin (http://localhost:9411) and filter in Kibana Discover to see logs across services.
 
 See [docs/KIBANA_DASHBOARDS_PROPOSAL.md](docs/KIBANA_DASHBOARDS_PROPOSAL.md) for proposed designs. See [docs/ELK_LOGGING.md](docs/ELK_LOGGING.md) for setup.

@@ -4,7 +4,16 @@ Place exported Kibana saved objects (`.ndjson`) in this directory to have them i
 
 ## Bundled dashboards
 
-- **log-overview.ndjson** – A minimal Log Overview dashboard (empty panels). Open in Kibana and add visualizations via Lens using the `application-logs*` data view.
+All dashboards are minimal shells (empty panels). Open in Kibana and add visualizations via **Lens** using the `application-logs*` data view.
+
+| Dashboard | File | Suggested panels |
+|-----------|------|------------------|
+| **Log Overview** | log-overview.ndjson | Log volume by service (Pie), by level (Bar), over time (Area), Error/WARN stats |
+| **Logs by Service & Level** | logs-by-service-level.ndjson | Pie: Count by `service`; Bar: X `level` Y Count; Area: X `@timestamp` Y Count |
+| **Error & Warning Monitoring** | error-warning-monitoring.ndjson | Line: Errors over time (filter `level: "ERROR"`); Line: Warnings; Bar: Errors by service; Table: Top error `logger_name` |
+| **Trace Correlation** | trace-correlation.ndjson | Markdown: instructions; Discover embed: filter `traceId` from Zipkin |
+| **Log Operations** | log-operations.ndjson | Line: Logs/min by service (1m bucket); Pie: Top 10 `logger_name`; Stat: Count with `traceId` |
+| **Microservices Log Health** | microservices-health.ndjson | Stat: Error count; Stat: WARN count; Pie: by service; Area: volume over time |
 
 ## How to add more dashboards
 
