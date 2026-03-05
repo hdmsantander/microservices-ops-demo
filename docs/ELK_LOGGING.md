@@ -122,6 +122,7 @@ See [elk/kibana-dashboards/README.md](../elk/kibana-dashboards/README.md) for st
 | No documents in Discover | No logs produced yet | Trigger app activity (e.g. call `/v1/pets`); wait for connector to ingest |
 | "legacy OpenSSL providers enabled" in Kibana logs | Known Kibana/Node.js behavior | Safe to ignore; Elastic is addressing in future releases. See [elastic.co/guide](https://www.elastic.co/guide/en/kibana/8.17/production.html#openssl-legacy-provider) |
 | "Failed to bind to 0.0.0.0:8083" / "Address already in use" | Kafka Connect default port 8083 collides with landoop or another service | We use `CONNECT_LISTENERS=http://0.0.0.0:8084` so Connect binds to 8084. Ensure 8084 is in `start.sh` port check |
+| Kibana healthcheck fails / never green | Kibana 8 uses `level` (e.g. "available") not `state` ("green") in `/api/status` | Healthcheck accepts both. Ensure `SERVER_HOST=0.0.0.0`; `start_period` 90s for migrations |
 
 ## Integration with observability stack
 
