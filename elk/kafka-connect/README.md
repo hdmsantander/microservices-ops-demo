@@ -2,6 +2,10 @@
 
 Custom Kafka Connect image with the **Confluent Elasticsearch Sink Connector** pre-installed. Sinks data from Kafka topics (e.g. `application-logs`) into Elasticsearch.
 
+## Port
+
+REST API runs on **8084** (not 8083). Port 8083 is used by `landoop/fast-data-dev`'s built-in Kafka Connect; we use `CONNECT_LISTENERS=http://0.0.0.0:8084` to avoid the collision.
+
 ## Base Image
 
 - **Image**: `confluentinc/cp-kafka-connect:7.6.0`

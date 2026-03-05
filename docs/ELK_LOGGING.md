@@ -29,7 +29,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full Log Flow diagram.
 |---------|------|-----|
 | Elasticsearch | 9200 | http://localhost:9200 |
 | Kibana | 5601 | http://localhost:5601 |
-| Kafka Connect REST | 8084 | http://localhost:8084 |
+| Kafka Connect REST | 8084 | http://localhost:8084 (8084 avoids conflict with landoop Connect on 8083) |
 
 ## Startup
 
@@ -121,6 +121,7 @@ See [elk/kibana-dashboards/README.md](../elk/kibana-dashboards/README.md) for st
 | Data view missing | Provision not run | Run `./elk/provision-kibana.sh` |
 | No documents in Discover | No logs produced yet | Trigger app activity (e.g. call `/v1/pets`); wait for connector to ingest |
 | "legacy OpenSSL providers enabled" in Kibana logs | Known Kibana/Node.js behavior | Safe to ignore; Elastic is addressing in future releases. See [elastic.co/guide](https://www.elastic.co/guide/en/kibana/8.17/production.html#openssl-legacy-provider) |
+| "Failed to bind to 0.0.0.0:8083" / "Address already in use" | Kafka Connect default port 8083 collides with landoop or another service | We use `CONNECT_LISTENERS=http://0.0.0.0:8084` so Connect binds to 8084. Ensure 8084 is in `start.sh` port check |
 
 ## Integration with observability stack
 
