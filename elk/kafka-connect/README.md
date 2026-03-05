@@ -4,7 +4,7 @@ Custom Kafka Connect image with the **Confluent Elasticsearch Sink Connector** p
 
 ## Port
 
-REST API runs on **8084** (not 8083). Port 8083 is used by `landoop/fast-data-dev`'s built-in Kafka Connect; we use `CONNECT_LISTENERS=http://0.0.0.0:8084` to avoid the collision.
+REST API runs on **8084** (not 8083). Port 8083 is used by `landoop/fast-data-dev`'s built-in Kafka Connect. A custom entrypoint (`docker-entrypoint-patch.sh`) patches the generated worker config to force `listeners=http://0.0.0.0:8084`, since `CONNECT_REST_PORT`/`CONNECT_LISTENERS` are ignored by some cp-kafka-connect versions.
 
 ## Base Image
 
