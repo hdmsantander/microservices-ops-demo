@@ -120,6 +120,7 @@ See [elk/kibana-dashboards/README.md](../elk/kibana-dashboards/README.md) for st
 | Connector failed | Elasticsearch not ready | Check Elasticsearch health: `curl http://localhost:9200/_cluster/health` |
 | Data view missing | Provision not run | Run `./elk/provision-kibana.sh` |
 | No documents in Discover | No logs produced yet | Trigger app activity (e.g. call `/v1/pets`); wait for connector to ingest |
+| "legacy OpenSSL providers enabled" in Kibana logs | Known Kibana/Node.js behavior | Safe to ignore; Elastic is addressing in future releases. See [elastic.co/guide](https://www.elastic.co/guide/en/kibana/8.17/production.html#openssl-legacy-provider) |
 
 ## Integration with observability stack
 

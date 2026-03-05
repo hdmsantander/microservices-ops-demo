@@ -1,7 +1,10 @@
 server:
   port: 8888
 
+# Use native (filesystem) backend; without this, config server defaults to git and requires a URI
 spring:
+  profiles:
+    active: native
   application:
     name: config-server
   cloud:
