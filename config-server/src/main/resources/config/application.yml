@@ -1,6 +1,12 @@
 # Shared configuration for all microservices
 # Override per application via {application}.yml
 
+# Log distribution to Kafka (enable with spring.profiles.include=kafka-logging)
+logging:
+  kafka:
+    bootstrap-servers: localhost:9092
+    topic: application-logs
+
 spring:
   cloud:
     stream:

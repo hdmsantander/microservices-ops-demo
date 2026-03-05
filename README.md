@@ -7,6 +7,7 @@ This repository holds a Spring Boot OPS demo with the following components:
 - A Zipkin server that receives traces from the microservices via [Micrometer Tracing](https://micrometer.io/docs/tracing) (Brave).
 - A Prometheus server that scrapes metrics from [Spring Boot Actuator](https://docs.spring.io/spring-boot/docs/current/reference/html/actuator.html).
 - A Kafka cluster (landoop/fast-data-dev) for event-driven communication between the microservices and the tracer, including a Web UI.
+- **Elasticsearch** (9200) and **Kibana** (5601) for log analytics. Logs from Query and Inventory are sent to the `application-logs` Kafka topic and ingested via Kafka Connect. See [docs/ELK_LOGGING.md](docs/ELK_LOGGING.md).
 
 ## Prerequisites
 
@@ -22,7 +23,7 @@ This repository holds a Spring Boot OPS demo with the following components:
 ./start.sh
 ```
 
-This script packages Config Server, both microservices, and Admin Server, builds Docker images, and starts the entire stack (Config Server, Kafka, Zipkin, Prometheus, Admin, and both microservices).
+This script packages Config Server, both microservices, and Admin Server, builds Docker images, and starts the entire stack (Config Server, Kafka, Zipkin, Prometheus, Grafana, Elasticsearch, Kibana, Kafka Connect, Admin, and both microservices).
 
 ### Start infrastructure only (Kafka, Zipkin, Prometheus)
 
@@ -82,11 +83,13 @@ flowchart TB
         AE["adoption-events-v1"]
         ACE["adoption-congratulation-events-v1"]
         ZipkinTopic["zipkin (traces)"]
+        AppLogs["application-logs"]
     end
 
     subgraph Observability["Observability"]
         Zipkin["Zipkin<br/>:9411<br/>Tracing"]
         Prometheus["Prometheus<br/>:9412<br/>Metrics"]
+        Kibana["Kibana<br/>:5601<br/>Logs"]
     end
 
     PetStore <-->|HTTP| Query
@@ -102,6 +105,9 @@ flowchart TB
     Query -->|traces| ZipkinTopic
     Inventory -->|traces| ZipkinTopic
     ZipkinTopic -->|consume| Zipkin
+    Query -->|logs| AppLogs
+    Inventory -->|logs| AppLogs
+    AppLogs -.->|Kafka Connect| Kibana
 
     Prometheus -->|scrape /actuator/prometheus| Query
     Prometheus -->|scrape /actuator/prometheus| Inventory
@@ -119,6 +125,7 @@ flowchart TB
 | `adoption-events-v1`                | Query            | Inventory  | Pet adoption events              |
 | `adoption-congratulation-events-v1` | Inventory        | (external) | Adoption confirmation events     |
 | `zipkin`                            | Query, Inventory | Zipkin     | Distributed traces               |
+| `application-logs`                 | Query, Inventory | Kafka Connect → Elasticsearch | Structured JSON logs for Kibana |
 
 ## Running Tests
 
@@ -133,6 +140,28 @@ cd inventory-microservice && ./mvnw test
 
 See [docs/TESTING.md](docs/TESTING.md) for test categories and gRPC testing notes. See [docs/IMPROVEMENT_REPORT.md](docs/IMPROVEMENT_REPORT.md) for future improvements. See [docs/SCHEMA_REGISTRY_EUREKA_CONFIG_PROPOSAL.md](docs/SCHEMA_REGISTRY_EUREKA_CONFIG_PROPOSAL.md) for evaluation of Schema Registry, Eureka, and Spring Config Server.
 
+## Profiling and Load Testing
+
+Load test the microservices and generate performance reports:
+
+```bash
+./start.sh profile
+```
+
+This builds and starts the full stack, waits for services to be healthy, runs a Gatling load test (default 60s, 2 req/s), and outputs the HTML report path. Customize with `PROFILE_DURATION` and `PROFILE_RATE`:
+
+```bash
+PROFILE_DURATION=120 PROFILE_RATE=5 ./start.sh profile
+```
+
+If the stack is already running, run only the load test:
+
+```bash
+cd profiling && ./run.sh 60 2
+```
+
+See [docs/PROFILING.md](docs/PROFILING.md) for methodology, metrics, JFR, and troubleshooting.
+
 ## gRPC (Query ↔ Inventory)
 
 Query syncs with Inventory via **gRPC** (port 9090) when `inventory.grpc.enabled=true`. Operations: `GetInventory`, `GetOrder`, `RefreshInventory`. REST remains available as fallback. See [docs/GRPC_IMPLEMENTATION.md](docs/GRPC_IMPLEMENTATION.md).
@@ -146,6 +175,7 @@ Query syncs with Inventory via **gRPC** (port 9090) when `inventory.grpc.enabled
 - **Tracing**: Traces are sent to Zipkin via Kafka by default. Set `management.tracing.export.zipkin.transport: kafka` (default) or `http`. For Kafka: `kafka.bootstrap-servers` (default: `localhost:9092`), `kafka.topic` (default: `zipkin`). For HTTP: set `transport: http` and `endpoint: http://localhost:9411/api/v2/spans`.
 - **Spring Cloud 2025.1.0**: Required for Spring Boot 4.0.3 compatibility.
 - **Kafka JSON (Spring Kafka 4.x)**: Uses `JacksonJsonDeserializer` and `JacksonJsonSerializer`. Configure via binder-level `consumer-properties` and `producer-properties` (not bindings-level). Use bracket notation for dotted keys, e.g. `"[value.deserializer]"`, `"[spring.json.trusted.packages]"`, `"[spring.json.value.default.type]"`.
+- **Log distribution to Kafka**: Enabled by default in Docker (`kafka-logging` profile). Structured JSON logs (traceId/spanId) flow to `application-logs` → Kafka Connect → Elasticsearch → Kibana. See [docs/LOGGING_KAFKA.md](docs/LOGGING_KAFKA.md) and [docs/ELK_LOGGING.md](docs/ELK_LOGGING.md).
 
 ## Query microservice
 
@@ -232,6 +262,10 @@ void registerGauge() {
 ```
 
 ![Orders updated](.img/10.png)
+
+## Kibana (Elasticsearch logs)
+
+Kibana is accessible at [http://localhost:5601](http://localhost:5601). Use **Discover** to search logs from Query and Inventory. Logs are ingested from the `application-logs` Kafka topic via Kafka Connect. Create dashboards for log level, service, or trace correlation. See [docs/ELK_LOGGING.md](docs/ELK_LOGGING.md) for setup and dashboard instructions.
 
 ## Zipkin server
 

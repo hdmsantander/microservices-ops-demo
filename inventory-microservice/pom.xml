@@ -141,6 +141,16 @@
 			<version>4.0.1</version>
 		</dependency>
 		<dependency>
+			<groupId>net.logstash.logback</groupId>
+			<artifactId>logstash-logback-encoder</artifactId>
+			<version>8.0</version>
+		</dependency>
+		<dependency>
+			<groupId>com.github.danielwegener</groupId>
+			<artifactId>logback-kafka-appender</artifactId>
+			<version>0.2.0-RC2</version>
+		</dependency>
+		<dependency>
 			<groupId>mx.hdmsantander.opsdemo</groupId>
 			<artifactId>inventory-grpc-api</artifactId>
 			<version>0.0.1-SNAPSHOT</version>

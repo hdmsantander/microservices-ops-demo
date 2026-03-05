@@ -7,10 +7,13 @@ COMPOSE_FULL="docker-compose.yml"
 SKIP_TESTS=""
 MODE="full"
 TESTS_ONLY=""
+PROFILE_MODE=""
+PROFILE_DURATION="${PROFILE_DURATION:-60}"
+PROFILE_RATE="${PROFILE_RATE:-2}"
 
-# Ports required by Docker stack (Redis:6379, redis_exporter:9121, Kafka:9092, Prometheus:9412, Zipkin:9411, Grafana:3000, Config:8888, Admin:8089, inventory:8085/9090, query:8086)
+# Ports required by Docker stack (+ Elasticsearch:9200, Kibana:5601, Kafka Connect:8083)
 PORTS_MINIMAL="6379 9092 9411 9412 9121"
-PORTS_FULL="6379 8085 8086 8088 8089 9090 9092 9411 9412 9121 3000"
+PORTS_FULL="6379 8085 8086 8088 8089 9090 9092 9411 9412 9121 3000 5601 8083 9200"
 
 # Maven command: use wrapper (./mvnw) only in cloud env or when --mvnw; default mvn
 USE_MVNW="${USE_MVNW:-}"
@@ -73,13 +76,19 @@ parse_args() {
                 MODE="full"
                 shift
                 ;;
+            profile|--profile|-p)
+                PROFILE_MODE="1"
+                MODE="full"
+                shift
+                ;;
             *)
                 echo "Unknown option: $1"
-                echo "Usage: $0 [minimal|--minimal|-m] [full|--full|-f] [--skip-tests] [--tests-only] [--mvnw]"
+                echo "Usage: $0 [minimal|full|profile] [--skip-tests] [--tests-only] [--mvnw]"
                 echo "  (no args)  Build and start full stack, run tests"
                 echo "  minimal   Start infrastructure only (Kafka + Zipkin + Prometheus)"
                 echo "  full      Build and start full stack (same as no args)"
                 echo "  --skip-tests  Skip tests when packaging microservices (full stack only)"
+                echo "  profile    Start full stack, run load profiling, generate report"
                 echo "  --tests-only  Run tests only for microservices (no Docker)"
                 echo "  --mvnw     Use Maven wrapper (./mvnw) instead of system mvn (auto in cloud: CI, CURSOR_RUNTIME)"
                 exit 1
@@ -175,12 +184,78 @@ start_full() {
     (cd admin-server && $mvn_a -q package -DskipTests) && \
     echo "Success building sources! Checking required ports before Docker..." && \
     check_ports_available "$PORTS_FULL" && \
-    echo "Starting full environment..." && \
+    echo "Starting full environment (including Elasticsearch, Kibana, Kafka Connect)..." && \
     docker compose -f "$COMPOSE_FULL" build && \
-    docker compose -f "$COMPOSE_FULL" up
+    docker compose -f "$COMPOSE_FULL" up -d && \
+    echo "" && \
+    echo "Waiting for Kafka Connect (for ELK log ingestion)..." && \
+    (sleep 45 && ./elk/init-elk.sh 2>/dev/null || echo "ELK init deferred (run ./elk/init-elk.sh manually when ready)") & \
+    docker compose -f "$COMPOSE_FULL" logs -f
+}
+
+run_profile() {
+    local mvn_q="$(get_mvn query-microservice)"
+    local mvn_i="$(get_mvn inventory-microservice)"
+    local mvn_a="$(get_mvn admin-server)"
+    local mvn_c="$(get_mvn config-server)"
+    local mvn_p="$(get_mvn profiling)"
+
+    echo "=== Profiling mode ==="
+    echo "1. Building and starting full stack..."
+    echo "2. Waiting for services to be healthy..."
+    echo "3. Running Gatling load test (duration=${PROFILE_DURATION}s, rate=${PROFILE_RATE})..."
+    echo "4. Generating report..."
+    echo ""
+
+    check_ports_available "$PORTS_FULL"
+    echo "Packaging microservices..."
+    (cd inventory-grpc-api && $mvn_i -q -f pom.xml install -DskipTests) && \
+    (cd config-server && $mvn_c -q package -DskipTests) && \
+    (cd query-microservice && $mvn_q -q package ${SKIP_TESTS}) && \
+    (cd inventory-microservice && $mvn_i -q package ${SKIP_TESTS}) && \
+    (cd admin-server && $mvn_a -q package -DskipTests) && \
+    echo "Success building sources!" && \
+    docker compose -f "$COMPOSE_FULL" build && \
+    docker compose -f "$COMPOSE_FULL" up -d
+
+    echo "Waiting for Query (8086) and Inventory (8085) to be healthy..."
+    for i in $(seq 1 90); do
+        if curl -sSf --connect-timeout 2 http://localhost:8086/actuator/health &>/dev/null && \
+           curl -sSf --connect-timeout 2 http://localhost:8085/actuator/health &>/dev/null; then
+            echo "Services ready."
+            break
+        fi
+        sleep 2
+        [[ $i -eq 90 ]] && { echo "Timeout waiting for services."; docker compose -f "$COMPOSE_FULL" logs --tail=50; exit 1; }
+    done
+
+    sleep 5
+
+    echo ""
+    echo "Running Gatling load test..."
+    (cd profiling && $mvn_p -q test-compile gatling:test \
+        -Dgatling.simulationClass=mx.hdmsantander.opsdemo.profiling.PetShopSimulation \
+        -Dprofiling.duration.sec="$PROFILE_DURATION" \
+        -Dprofiling.users="$PROFILE_RATE")
+
+    REPORT_DIR="$(ls -td profiling/target/gatling/petshopsimulation-* 2>/dev/null | head -1)"
+    if [[ -n "$REPORT_DIR" && -f "$REPORT_DIR/index.html" ]]; then
+        echo ""
+        echo "=== Profiling complete ==="
+        echo "Gatling report: $REPORT_DIR/index.html"
+        echo "Open with: file://$(realpath "$REPORT_DIR/index.html" 2>/dev/null || echo "$REPORT_DIR/index.html")"
+    fi
+
+    echo ""
+    echo "Stack is still running. Stop with: docker compose -f $COMPOSE_FULL down"
 }
 
 parse_args "$@"
+
+if [[ -n "$PROFILE_MODE" ]]; then
+    run_profile
+    exit 0
+fi
 
 if [[ -n "$TESTS_ONLY" ]]; then
     run_tests_only

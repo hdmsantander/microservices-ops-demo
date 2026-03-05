@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+	<include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+	<springProperty scope="context" name="appName" source="spring.application.name" defaultValue="query-microservice"/>
+	<springProperty scope="context" name="kafkaBrokers" source="logging.kafka.bootstrap-servers" defaultValue="localhost:9092"/>
+	<springProperty scope="context" name="kafkaTopic" source="logging.kafka.topic" defaultValue="application-logs"/>
+
+	<!-- JSON console with trace correlation (traceId, spanId from Micrometer) -->
+	<appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder class="net.logstash.logback.encoder.LogstashEncoder">
+			<includeMdcKeyName>traceId</includeMdcKeyName>
+			<includeMdcKeyName>spanId</includeMdcKeyName>
+			<customFields>{"service":"${appName}"}</customFields>
+		</encoder>
+	</appender>
+
+	<!-- Kafka appender: enable with spring.profiles.include=kafka-logging -->
+	<springProfile name="kafka-logging">
+		<appender name="KAFKA" class="com.github.danielwegener.logback.kafka.KafkaAppender">
+			<encoder class="com.github.danielwegener.logback.kafka.encoding.PatternLayoutKafkaMessageEncoder">
+				<layout class="ch.qos.logback.classic.PatternLayout">
+					<pattern>{"@timestamp":"%d{ISO8601}","level":"%-5level","logger":"%logger{40}","message":"%msg","traceId":"%X{traceId:-}","spanId":"%X{spanId:-}","service":"${appName}"}%n</pattern>
+				</layout>
+			</encoder>
+			<topic>${kafkaTopic}</topic>
+			<keyingStrategy class="com.github.danielwegener.logback.kafka.keying.HostNameKeyingStrategy"/>
+			<deliveryStrategy class="com.github.danielwegener.logback.kafka.delivery.AsynchronousDeliveryStrategy"/>
+			<producerConfig>bootstrap.servers=${kafkaBrokers}</producerConfig>
+			<producerConfig>linger.ms=5</producerConfig>
+			<producerConfig>max.block.ms=3000</producerConfig>
+		</appender>
+		<appender name="ASYNC_KAFKA" class="ch.qos.logback.classic.AsyncAppender">
+			<discardingThreshold>0</discardingThreshold>
+			<queueSize>256</queueSize>
+			<appender-ref ref="KAFKA"/>
+		</appender>
+	</springProfile>
+
+	<root level="INFO">
+		<appender-ref ref="CONSOLE"/>
+		<springProfile name="kafka-logging"><appender-ref ref="ASYNC_KAFKA"/></springProfile>
+	</root>
+</configuration>

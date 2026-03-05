@@ -122,6 +122,8 @@ services:
       dockerfile: Dockerfile
     container_name: query-microservice-demo
     network_mode: host
+    environment:
+      SPRING_PROFILES_ACTIVE: development,kafka-logging
     depends_on:
       config-server:
         condition: service_healthy
@@ -145,6 +147,8 @@ services:
       dockerfile: Dockerfile
     container_name: inventory-microservice-demo
     network_mode: host
+    environment:
+      SPRING_PROFILES_ACTIVE: development,kafka-logging
     depends_on:
       config-server:
         condition: service_healthy
@@ -160,3 +164,60 @@ services:
       timeout: 5s
       retries: 3
       start_period: 30s
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    container_name: elasticsearch-demo
+    network_mode: host
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      "ES_JAVA_OPTS": "-Xms512m -Xmx512m"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sS http://localhost:9200/_cluster/health?wait_for_status=yellow 2>/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.15.0
+    container_name: kibana-demo
+    network_mode: host
+    environment:
+      ELASTICSEARCH_HOSTS: '["http://localhost:9200"]'
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sS http://localhost:5601/api/status 2>/dev/null | grep -q '\"state\":\"green\"' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  kafka-connect:
+    build:
+      context: ./elk/kafka-connect
+      dockerfile: Dockerfile
+    container_name: kafka-connect-demo
+    network_mode: host
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: localhost:9092
+      CONNECT_REST_ADVERTISED_HOST_NAME: localhost
+      CONNECT_GROUP_ID: connect-application-logs
+      CONNECT_CONFIG_STORAGE_TOPIC: _connect-configs
+      CONNECT_OFFSET_STORAGE_TOPIC: _connect-offsets
+      CONNECT_STATUS_STORAGE_TOPIC: _connect-status
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter
+      CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+      CONNECT_PLUGIN_PATH: '/usr/share/java,/usr/share/confluent-hub-components'
+    depends_on:
+      kafka:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
