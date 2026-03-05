@@ -25,10 +25,22 @@ if [ -f "$PROP_FILE" ]; then
   else
     echo 'listeners=http://0.0.0.0:8084' >> "$PROP_FILE"
   fi
+  # rest.advertised.listener must be the listener name ("http"), not full URL
   if grep -q '^rest\.advertised\.listener=' "$PROP_FILE" 2>/dev/null; then
-    sed -i 's|^rest\.advertised\.listener=.*|rest.advertised.listener=http://localhost:8084|' "$PROP_FILE"
+    sed -i 's|^rest\.advertised\.listener=.*|rest.advertised.listener=http|' "$PROP_FILE"
   else
-    echo 'rest.advertised.listener=http://localhost:8084' >> "$PROP_FILE"
+    echo 'rest.advertised.listener=http' >> "$PROP_FILE"
+  fi
+  # host and port for advertised URL (localhost:8084)
+  if grep -q '^rest\.advertised\.host\.name=' "$PROP_FILE" 2>/dev/null; then
+    sed -i 's|^rest\.advertised\.host\.name=.*|rest.advertised.host.name=localhost|' "$PROP_FILE"
+  else
+    echo 'rest.advertised.host.name=localhost' >> "$PROP_FILE"
+  fi
+  if grep -q '^rest\.advertised\.port=' "$PROP_FILE" 2>/dev/null; then
+    sed -i 's|^rest\.advertised\.port=.*|rest.advertised.port=8084|' "$PROP_FILE"
+  else
+    echo 'rest.advertised.port=8084' >> "$PROP_FILE"
   fi
   echo "===> Patched listeners to 8084"
 fi
