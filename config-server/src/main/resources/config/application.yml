@@ -1,0 +1,49 @@
+# Shared configuration for all microservices
+# Override per application via {application}.yml
+
+# Log distribution to Kafka (enable with spring.profiles.include=kafka-logging)
+logging:
+  kafka:
+    bootstrap-servers: localhost:9092
+    topic: application-logs
+
+spring:
+  cloud:
+    stream:
+      kafka:
+        binder:
+          brokers: localhost:9092
+          replication-factor: 1
+          enable-observation: true
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        failureRateThreshold: 50
+        slowCallRateThreshold: 100
+        slowCallDurationThreshold: 60s
+        permittedNumberOfCallsInHalfOpenState: 5
+        slidingWindowSize: 100
+        minimumNumberOfCalls: 5
+  retry:
+    configs:
+      default:
+        maxAttempts: 5
+        waitDuration: 500ms
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+    propagation:
+      type: b3
+    export:
+      enabled: true
+      zipkin:
+        transport: kafka
+        kafka:
+          bootstrap-servers: localhost:9092
+          topic: zipkin

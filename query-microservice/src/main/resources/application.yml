@@ -4,6 +4,8 @@ server:
 spring:
   application:
     name: query-microservice
+  config:
+    import: optional:configserver:http://localhost:8888
   profiles:
     active: development
 
@@ -12,13 +14,22 @@ spring:
     driver-class-name: org.h2.Driver
     username: sa
     password: password
-
   jpa:
     hibernate:
       ddl-auto: update
     generate-ddl: true
     show-sql: true
     database-platform: org.hibernate.dialect.H2Dialect
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  boot:
+    admin:
+      client:
+        url: http://localhost:8089
+        instance:
+          service-url: http://localhost:8086
 
   cloud:
     function:
@@ -32,7 +43,6 @@ spring:
           destination: adoption-events-v1
       kafka:
         binder:
-          # landoop/fast-data-dev broker; override via SPRING_CLOUD_STREAM_KAFKA_BINDER_BROKERS
           brokers: localhost:9092
           replication-factor: 1
           enable-observation: true
@@ -61,6 +71,11 @@ resilience4j:
     aspect-order: 1
   retry:
     configs:
+      default:
+        maxAttempts: 5
+        waitDuration: 500ms
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
       external:
         maxAttempts: 5
         waitDuration: 500ms
@@ -101,13 +116,10 @@ management:
     export:
       enabled: true
       zipkin:
-        # transport: kafka (default) | http. Use http to send spans via HTTP instead of Kafka.
         transport: kafka
         kafka:
           bootstrap-servers: localhost:9092
           topic: zipkin
-        # Optional HTTP sender. Set transport: http and endpoint to use HTTP instead of Kafka.
-        # endpoint: http://localhost:9411/api/v2/spans
   endpoints:
     web:
       exposure:
@@ -118,3 +130,21 @@ management:
           - metrics
           - prometheus
           - health
+  health:
+    redis:
+      enabled: true
+
+reservation:
+  ttl-seconds: 300
+  cleanup-interval-seconds: 60
+
+inventory:
+  service-url: http://localhost:8085
+  grpc:
+    enabled: true
+
+grpc:
+  client:
+    inventory:
+      address: static://localhost:9090
+      negotiationType: PLAINTEXT

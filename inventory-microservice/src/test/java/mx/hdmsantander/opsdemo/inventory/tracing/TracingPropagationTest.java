@@ -20,7 +20,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.micrometer.tracing.Tracer;
+import mx.hdmsantander.opsdemo.inventory.InventoryApplication;
 import mx.hdmsantander.opsdemo.inventory.service.InventoryService;
+import mx.hdmsantander.opsdemo.inventory.service.OrderService;
 
 /**
  * Verifies that trace context is propagated in the bean context and that
@@ -30,7 +32,7 @@ import mx.hdmsantander.opsdemo.inventory.service.InventoryService;
  * Uses HTTP transport for Zipkin (no Kafka client) and SAME_THREAD execution.
  * Uses embedded Kafka for Spring Cloud Stream (no external Kafka required).
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(classes = InventoryApplication.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestRestTemplate
 @ActiveProfiles("test")
 @Execution(ExecutionMode.SAME_THREAD)
@@ -46,6 +48,9 @@ class TracingPropagationTest {
 	@MockitoBean
 	InventoryService inventoryService;
 
+	@MockitoBean
+	OrderService orderService;
+
 	@Test
 	void tracer_is_present_in_context() {
 		assertThat(tracer).isNotNull();
@@ -54,7 +59,7 @@ class TracingPropagationTest {
 	@Test
 	void trace_context_is_propagated_in_http_response() {
 		JsonNode inventory = new ObjectMapper().createObjectNode().put("available", 0).put("pending", 0).put("sold", 0);
-		when(inventoryService.getInventory()).thenReturn(inventory);
+		when(inventoryService.getInventory(null, null)).thenReturn(inventory);
 
 		ResponseEntity<String> response = restTemplate.getForEntity("/v1/inventory", String.class);
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -71,7 +76,7 @@ class TracingPropagationTest {
 	@Test
 	void tracer_creates_span_context_when_active() {
 		JsonNode inventory = new ObjectMapper().createObjectNode().put("available", 0);
-		when(inventoryService.getInventory()).thenReturn(inventory);
+		when(inventoryService.getInventory(null, null)).thenReturn(inventory);
 
 		ResponseEntity<String> response = restTemplate.getForEntity("/v1/inventory", String.class);
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -80,7 +85,7 @@ class TracingPropagationTest {
 
 	@Test
 	void empty_inventory_maps_to_server_error() {
-		when(inventoryService.getInventory()).thenReturn(new ObjectMapper().createObjectNode());
+		when(inventoryService.getInventory(null, null)).thenReturn(new ObjectMapper().createObjectNode());
 
 		ResponseEntity<String> response = restTemplate.getForEntity("/v1/inventory", String.class);
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);

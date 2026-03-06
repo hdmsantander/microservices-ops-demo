@@ -1,8 +1,20 @@
-# Use HTTP for Zipkin in tests (Kafka client disabled; no Kafka required)
+# Disable Config Server in tests (use local config only)
 spring:
+  cloud:
+    config:
+      enabled: false
+  boot:
+    admin:
+      client:
+        enabled: false
   task:
     scheduling:
       enabled: false
+
+# Disable gRPC server in tests (avoids port bind; Resilience4j tests use REST mocks)
+grpc:
+  server:
+    port: -1
 
 management:
   tracing:

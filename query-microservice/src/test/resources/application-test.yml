@@ -1,4 +1,28 @@
-# Use HTTP for Zipkin in tests (Kafka client disabled; no Kafka required)
+# Disable Config Server in tests (use local config only)
+spring:
+  cloud:
+    config:
+      enabled: false
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+  data:
+    redis:
+      repositories:
+        enabled: false
+  task:
+    scheduling:
+      enabled: false
+  boot:
+    admin:
+      client:
+        enabled: false
+
+# Use REST for Inventory in tests (gRPC client not available in unit/integration tests)
+inventory:
+  grpc:
+    enabled: false
+
 management:
   tracing:
     export:

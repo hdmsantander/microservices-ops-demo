@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package mx.hdmsantander.opsdemo.inventory.v1;
+
+option java_multiple_files = true;
+option java_package = "mx.hdmsantander.opsdemo.inventory.v1";
+option java_outer_classname = "InventoryProto";
+
+// InventoryService provides internal gRPC endpoints for Query ↔ Inventory communication.
+// Replaces REST for sync calls: getInventory, getOrderLive, refresh.
+service InventoryService {
+
+  // GetInventory returns inventory from PetStore with optional filters.
+  rpc GetInventory(GetInventoryRequest) returns (GetInventoryResponse);
+
+  // GetOrder returns a single order from PetStore by ID.
+  rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
+
+  // RefreshInventory triggers order sync and returns current inventory.
+  rpc RefreshInventory(RefreshInventoryRequest) returns (RefreshInventoryResponse);
+}
+
+// --- GetInventory ---
+
+message GetInventoryRequest {
+  // Optional status filter (e.g. "available", "pending", "sold")
+  string status = 1;
+  // Optional low-stock threshold; only items with quantity < threshold are returned (0 = not set)
+  int32 low_stock_threshold = 2;
+}
+
+message GetInventoryResponse {
+  // JSON string of inventory (preserves PetStore structure: {"available":N,"pending":N,"sold":N,...})
+  string json_body = 1;
+}
+
+// --- GetOrder ---
+
+message GetOrderRequest {
+  int32 order_id = 1;
+}
+
+message GetOrderResponse {
+  oneof result {
+    Order order = 1;
+    NotFound not_found = 2;
+  }
+}
+
+message Order {
+  int32 id = 1;
+  string pet_id = 2;
+  int32 quantity = 3;
+  string ship_date = 4;
+  string status = 5;
+  bool complete = 6;
+}
+
+message NotFound {
+  string message = 1;
+}
+
+// --- RefreshInventory ---
+
+message RefreshInventoryRequest {}
+
+message RefreshInventoryResponse {
+  // JSON string of refreshed inventory
+  string json_body = 1;
+}

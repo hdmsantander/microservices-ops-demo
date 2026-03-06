@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+	<include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+	<springProperty scope="context" name="appName" source="spring.application.name" defaultValue="inventory-microservice"/>
+	<springProperty scope="context" name="environment" source="spring.profiles.active" defaultValue="development"/>
+	<springProperty scope="context" name="kafkaBrokers" source="logging.kafka.bootstrap-servers" defaultValue="localhost:9092"/>
+	<springProperty scope="context" name="kafkaTopic" source="logging.kafka.topic" defaultValue="application-logs"/>
+
+	<!-- JSON console: trace-correlated, enriched for ELK -->
+	<appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder class="net.logstash.logback.encoder.LogstashEncoder">
+			<includeMdcKeyName>traceId</includeMdcKeyName>
+			<includeMdcKeyName>spanId</includeMdcKeyName>
+			<includeMdcKeyName>parentSpanId</includeMdcKeyName>
+			<customFields>{"service":"${appName}","environment":"${environment}","host":"${HOSTNAME:-localhost}"}</customFields>
+			<includeCallerData>false</includeCallerData>
+		</encoder>
+	</appender>
+
+	<!-- Kafka appender: enriched JSON for ELK traceability (traceId, spanId, service, thread, etc.) -->
+	<springProfile name="kafka-logging">
+		<appender name="KAFKA" class="com.github.danielwegener.logback.kafka.KafkaAppender">
+			<encoder class="com.github.danielwegener.logback.kafka.encoding.LayoutKafkaMessageEncoder">
+				<layout class="net.logstash.logback.layout.LogstashLayout">
+					<includeMdcKeyName>traceId</includeMdcKeyName>
+					<includeMdcKeyName>spanId</includeMdcKeyName>
+					<includeMdcKeyName>parentSpanId</includeMdcKeyName>
+					<customFields>{"service":"${appName}","environment":"${environment}","host":"${HOSTNAME:-localhost}"}</customFields>
+					<includeCallerData>false</includeCallerData>
+				</layout>
+			</encoder>
+			<topic>${kafkaTopic}</topic>
+			<keyingStrategy class="com.github.danielwegener.logback.kafka.keying.HostNameKeyingStrategy"/>
+			<deliveryStrategy class="com.github.danielwegener.logback.kafka.delivery.AsynchronousDeliveryStrategy"/>
+			<producerConfig>bootstrap.servers=${kafkaBrokers}</producerConfig>
+			<producerConfig>linger.ms=5</producerConfig>
+			<producerConfig>max.block.ms=3000</producerConfig>
+		</appender>
+		<appender name="ASYNC_KAFKA" class="ch.qos.logback.classic.AsyncAppender">
+			<discardingThreshold>0</discardingThreshold>
+			<queueSize>256</queueSize>
+			<appender-ref ref="KAFKA"/>
+		</appender>
+	</springProfile>
+
+	<springProfile name="!kafka-logging">
+		<root level="INFO">
+			<appender-ref ref="CONSOLE"/>
+		</root>
+	</springProfile>
+	<springProfile name="kafka-logging">
+		<root level="INFO">
+			<appender-ref ref="CONSOLE"/>
+			<appender-ref ref="ASYNC_KAFKA"/>
+		</root>
+	</springProfile>
+</configuration>

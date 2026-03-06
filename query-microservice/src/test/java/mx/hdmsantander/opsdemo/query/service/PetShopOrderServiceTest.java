@@ -56,4 +56,25 @@ class PetShopOrderServiceTest {
 
 		assertThat(result).isEmpty();
 	}
+
+	@Test
+	void getOrderById_returnsOrder_whenFound() {
+		PetShopOrder order = PetShopOrder.builder().orderId(1).petId("1").quantity(1).status("placed").build();
+		when(petShopOrderRepository.findById(1)).thenReturn(java.util.Optional.of(order));
+
+		java.util.Optional<PetShopOrder> result = petShopOrderService.getOrderById(1);
+
+		assertThat(result).isPresent();
+		assertThat(result.get().getOrderId()).isEqualTo(1);
+		assertThat(result.get().getPetId()).isEqualTo("1");
+	}
+
+	@Test
+	void getOrderById_returnsEmpty_whenNotFound() {
+		when(petShopOrderRepository.findById(999)).thenReturn(java.util.Optional.empty());
+
+		java.util.Optional<PetShopOrder> result = petShopOrderService.getOrderById(999);
+
+		assertThat(result).isEmpty();
+	}
 }

@@ -7,9 +7,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.atMost;
 import static org.mockito.Mockito.clearInvocations;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -77,10 +77,13 @@ class Resilience4jIntegrationTest {
 	private CircuitBreakerRegistry circuitBreakerRegistry;
 
 	@BeforeEach
-	void resetOrderServiceCircuit() {
-		CircuitBreaker cb = circuitBreakerRegistry.circuitBreaker("orderService");
-		if (cb != null) {
-			cb.transitionToClosedState();
+	void resetCircuitBreakersAndMock() {
+		reset(restTemplate);
+		for (String name : new String[] { "orderService", "inventoryService" }) {
+			CircuitBreaker cb = circuitBreakerRegistry.circuitBreaker(name);
+			if (cb != null) {
+				cb.transitionToClosedState();
+			}
 		}
 	}
 
@@ -91,42 +94,41 @@ class Resilience4jIntegrationTest {
 	@Test
 	@Order(1)
 	void inventoryService_returns_inventory_when_api_succeeds() throws Exception {
-		JsonNode inventory = objectMapper.createObjectNode().put("available", 10).put("pending", 2).put("sold", 5);
-		doReturn(ResponseEntity.ok(objectMapper.writeValueAsString(inventory)))
-				.when(restTemplate).getForEntity(eq(INVENTORY_URL), eq(String.class));
+		String jsonBody = "{\"available\":10,\"pending\":2,\"sold\":5}";
+		when(restTemplate.getForEntity(INVENTORY_URL, String.class)).thenReturn(ResponseEntity.ok(jsonBody));
 
-		JsonNode result = inventoryService.getInventory();
+		JsonNode result = inventoryService.getInventory(null, null);
 
 		assertThat(result).isNotNull();
 		assertThat(result.has("available")).as("Inventory should have 'available' from stubbed API").isTrue();
 		assertThat(result.get("available").asInt()).isEqualTo(10);
-		verify(restTemplate).getForEntity(eq(INVENTORY_URL), eq(String.class));
+		verify(restTemplate).getForEntity(INVENTORY_URL, String.class);
 	}
 
 	@Test
 	@Order(2)
 	void inventoryService_returns_fallback_when_api_fails() {
 		doThrow(new HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR))
-				.when(restTemplate).getForEntity(eq(INVENTORY_URL), eq(String.class));
+				.when(restTemplate).getForEntity(any(String.class), eq(String.class));
 
-		JsonNode result = inventoryService.getInventory();
+		JsonNode result = inventoryService.getInventory(null, null);
 
 		assertThat(result.isObject()).isTrue();
 		assertThat(result.isEmpty()).isTrue();
-		verify(restTemplate, atLeast(1)).getForEntity(eq(INVENTORY_URL), eq(String.class));
+		verify(restTemplate, atLeast(1)).getForEntity(any(String.class), eq(String.class));
 	}
 
 	@Test
 	@Order(3)
 	void inventoryService_circuit_breaker_returns_fallback_when_open() {
 		doThrow(new HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR))
-				.when(restTemplate).getForEntity(eq(INVENTORY_URL), eq(String.class));
+				.when(restTemplate).getForEntity(any(String.class), eq(String.class));
 
 		for (int i = 0; i < 5; i++) {
-			inventoryService.getInventory();
+			inventoryService.getInventory(null, null);
 		}
 
-		var result = inventoryService.getInventory();
+		var result = inventoryService.getInventory(null, null);
 		assertThat(result).isEmpty();
 	}
 
