@@ -10,8 +10,8 @@ RUN (microdnf install -y curl 2>/dev/null && microdnf clean all) || \
 
 WORKDIR /elk-init
 
-COPY docker-init.sh /elk-init/docker-init.sh
-COPY dashboards/ /elk-init/dashboards/
+COPY init/docker-init.sh /elk-init/docker-init.sh
+COPY kibana-dashboards/ /elk-init/dashboards/
 RUN chmod +x /elk-init/docker-init.sh
 
 ENTRYPOINT ["/elk-init/docker-init.sh"]

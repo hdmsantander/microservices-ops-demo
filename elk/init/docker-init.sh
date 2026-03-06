@@ -54,7 +54,7 @@ else
   echo "Connector registered."
 fi
 
-# 3. Wait for Kibana and provision data view
+# 3. Wait for Kibana and provision
 echo ""
 echo "Waiting for Kibana at $KIBANA_URL..."
 for i in $(seq 1 60); do
@@ -66,23 +66,12 @@ for i in $(seq 1 60); do
   [[ $i -eq 60 ]] && { echo "Timeout waiting for Kibana."; exit 1; }
 done
 
-echo "Creating data view application-logs*..."
-EXISTING=$(http "$KIBANA_URL/api/data_views" 2>/dev/null | grep -o '"title":"application-logs\*"' || true)
-if [[ -n "$EXISTING" ]]; then
-  echo "Data view already exists."
-else
-  if command -v curl &>/dev/null; then
-    curl -sS -X POST -H "kbn-xsrf: true" -H "Content-Type: application/json" \
-      --data '{"data_view":{"title":"application-logs*","timeFieldName":"@timestamp","name":"Application Logs"}}' \
-      "$KIBANA_URL/api/data_views/data_view" | grep -q '"id"' && echo "Data view created." || echo "Data view creation skipped."
-  fi
-fi
-
-# 4. Import Kibana dashboards (optional ndjson files)
+# 4. Import Kibana dashboards from elk/kibana-dashboards (data view + dashboards)
+# Import first so application-logs-dataview.ndjson creates the data view before dashboards reference it
 if [[ -d /elk-init/dashboards ]] && compgen -G /elk-init/dashboards/*.ndjson >/dev/null 2>&1; then
   echo ""
-  echo "Importing Kibana dashboards..."
-  for f in /elk-init/dashboards/*.ndjson; do
+  echo "Importing Kibana dashboards (from elk/kibana-dashboards)..."
+  for f in $(ls -1 /elk-init/dashboards/*.ndjson 2>/dev/null | sort); do
     [[ -f "$f" ]] || continue
     if command -v curl &>/dev/null; then
       curl -sS -X POST "$KIBANA_URL/api/saved_objects/_import?overwrite=true" \
@@ -90,6 +79,19 @@ if [[ -d /elk-init/dashboards ]] && compgen -G /elk-init/dashboards/*.ndjson >/d
         --form "file=@$f" | grep -q '"success"' && echo "  Imported $(basename "$f")" || echo "  Import skipped for $(basename "$f")"
     fi
   done
+fi
+
+# 5. Fallback: create data view via API if not present (e.g. no ndjson import)
+echo "Ensuring data view application-logs* exists..."
+EXISTING=$(http "$KIBANA_URL/api/data_views" 2>/dev/null | grep -o '"title":"application-logs\*"' || true)
+if [[ -n "$EXISTING" ]]; then
+  echo "Data view application-logs* ready."
+else
+  if command -v curl &>/dev/null; then
+    curl -sS -X POST -H "kbn-xsrf: true" -H "Content-Type: application/json" \
+      --data '{"data_view":{"title":"application-logs*","timeFieldName":"@timestamp","name":"Application Logs"}}' \
+      "$KIBANA_URL/api/data_views/data_view" | grep -q '"id"' && echo "Data view created via API." || echo "Data view creation skipped."
+  fi
 fi
 
 echo ""

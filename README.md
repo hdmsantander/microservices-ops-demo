@@ -316,7 +316,7 @@ The ELK stack provides centralized log analytics:
 | **Kibana**        | 5601 | Log search, dashboards, trace correlation                                                                |
 | **Kafka Connect** | 8084 | Elasticsearch Sink; ingests `application-logs` topic (8084 avoids conflict with landoop Connect on 8083) |
 
-**elk-init** runs at startup to create the `application-logs` Kafka topic, register the Kafka Connect Elasticsearch Sink connector, create the Kibana data view `application-logs*`, and import any `.ndjson` dashboards from `elk/init/dashboards/`.
+**elk-init** runs at startup to create the `application-logs` Kafka topic, register the Kafka Connect Elasticsearch Sink connector, import Kibana dashboards from `elk/kibana-dashboards/` (data view + pre-configured dashboards), and create the data view via API if needed.
 
 **Manual recovery**: If elk-init failed or running without Docker, run `./elk/init-elk.sh` then `./elk/provision-kibana.sh`. Log schema fields: `@timestamp`, `level`, `logger_name`, `message`, `thread_name`, `traceId`, `spanId`, `service`, `environment`, `host`, `stack_trace` (errors).
 
@@ -325,10 +325,10 @@ The ELK stack provides centralized log analytics:
 Kibana is accessible at [http://localhost:5601](http://localhost:5601).
 
 - **Discover**: Search logs from Query and Inventory. Filter by `service`, `level`, `traceId`, etc.
-- **Dashboards**: Six dashboards are auto-imported from `elk/init/dashboards/`: Log Overview, Logs by Service & Level, Error & Warning Monitoring, Trace Correlation, Log Operations, Microservices Log Health. Each is a shell—add panels via Lens using the `application-logs*` data view.
+- **Dashboards**: Six dashboards are auto-imported from `elk/kibana-dashboards/` with pre-configured Lens panels (log volume, by service/level, errors/warnings, trace correlation). See [elk/kibana-dashboards/README.md](elk/kibana-dashboards/README.md).
 - **Trace correlation**: Copy a `traceId` from Zipkin (http://localhost:9411) and filter in Kibana Discover to see logs across services.
 
-See [docs/KIBANA_DASHBOARDS_PROPOSAL.md](docs/KIBANA_DASHBOARDS_PROPOSAL.md) for proposed designs. Dashboards auto-imported from `elk/init/dashboards/*.ndjson`.
+See [docs/KIBANA_DASHBOARDS_PROPOSAL.md](docs/KIBANA_DASHBOARDS_PROPOSAL.md) for the full proposal.
 
 ## Zipkin server
 

@@ -250,8 +250,8 @@ services:
 
   elk-init:
     build:
-      context: ./elk/init
-      dockerfile: Dockerfile
+      context: ./elk
+      dockerfile: init/Dockerfile
     container_name: elk-init-demo
     network_mode: host
     restart: "no"
