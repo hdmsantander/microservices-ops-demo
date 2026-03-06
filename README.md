@@ -1,6 +1,8 @@
-# Microservices OPS demo
+# Microservices OPS Demo
 
-This repository holds a Spring Boot OPS demo with the following components:
+A full-stack observability demo showing Spring Boot microservices with metrics (Prometheus/Grafana), distributed tracing (Zipkin), centralized configuration (Spring Cloud Config), event-driven communication (Kafka), and log analytics (Elasticsearch/Kibana). Two microservices—Query and Inventory—integrate with the Swagger PetStore API, sync orders via Kafka, and communicate via gRPC with circuit breakers and resilience patterns.
+
+## Components
 
 - Two microservices (Spring Boot 4.0.3) that perform requests to the [Swagger's PetStore](https://petstore.swagger.io/) and communicate with each other using **gRPC** (primary) or HTTP and [Spring for Apache Kafka](https://spring.io/projects/spring-kafka).
 - A **Spring Cloud Config Server** (port 8888) for centralized configuration. Query, Inventory, and Admin Server fetch config at startup. See [docs/CONFIG_SERVER.md](docs/CONFIG_SERVER.md).
@@ -15,6 +17,8 @@ This repository holds a Spring Boot OPS demo with the following components:
 - **Docker** and **Docker Compose** (for running the full stack)
 - **Maven 3.8+**
 - **System resources** (full stack): ~6–7 GB RAM, ~3–5 CPU cores. Minimal stack: ~2 GB RAM.
+
+> **Demo context**: This stack is intended for local development and demonstrations. Grafana (admin/admin), Elasticsearch (security disabled), and Redis/Kafka use default configurations without authentication. See [docs/PR_REVIEW_REPORT.md](docs/PR_REVIEW_REPORT.md) for security considerations and production guidance.
 
 ## Quick Start
 
@@ -166,14 +170,16 @@ See [docs/TESTING.md](docs/TESTING.md) for test categories and gRPC testing note
 
 | Doc | Topic |
 |-----|-------|
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System diagrams, Docker startup, pet adoption, order sync, log flow, trace correlation |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System overview, diagrams, Docker startup, pet adoption, order sync, log flow, trace correlation |
 | [CHANGELOG_PR.md](docs/CHANGELOG_PR.md) | Observability and ELK changes summary |
 | [DOCKER.md](docs/DOCKER.md) | Container best practices, startup order |
-| [ELK_LOGGING.md](docs/ELK_LOGGING.md) | Elasticsearch, Kibana, log schema |
+| [ELK_LOGGING.md](docs/ELK_LOGGING.md) | Elasticsearch, Kibana, Kafka Connect, log schema |
 | [LOGGING_KAFKA.md](docs/LOGGING_KAFKA.md) | Log distribution, trace enrichment |
 | [CONFIG_SERVER.md](docs/CONFIG_SERVER.md) | Centralized configuration |
 | [GRPC_IMPLEMENTATION.md](docs/GRPC_IMPLEMENTATION.md) | gRPC for Query ↔ Inventory |
 | [PROFILING.md](docs/PROFILING.md) | Load testing with Gatling |
+| [PR_REVIEW_REPORT.md](docs/PR_REVIEW_REPORT.md) | Best practices review, recommendations, pitfall analysis |
+| [PR_SUMMARY.md](docs/PR_SUMMARY.md) | PR summary and pre-merge checklist for reviewers |
 | [IMPROVEMENT_REPORT.md](docs/IMPROVEMENT_REPORT.md) | Future improvements |
 
 ## Profiling and Load Testing
@@ -202,7 +208,7 @@ See [docs/PROFILING.md](docs/PROFILING.md) for methodology, metrics, JFR, and tr
 
 Query syncs with Inventory via **gRPC** (port 9090) when `inventory.grpc.enabled=true`. Operations: `GetInventory`, `GetOrder`, `RefreshInventory`. REST remains available as fallback. See [docs/GRPC_IMPLEMENTATION.md](docs/GRPC_IMPLEMENTATION.md).
 
-**Build order**: `inventory-grpc-api` must be installed before Query/Inventory. `./start.sh` handles this.
+**Build order**: `inventory-grpc-api` must be installed before Query/Inventory. `./start.sh` and CI workflows handle this (`mvn install -DskipTests -f inventory-grpc-api/pom.xml` first).
 
 ## Important Configuration
 
@@ -359,8 +365,8 @@ The stack uses `landoop/fast-data-dev`, which includes Kafka, Zookeeper, Schema 
 
 ### GitHub Actions
 
-- **Run Tests** (`.github/workflows/test.yml`): Runs tests for both microservices on every pull request targeting `main`, `master`, or `develop`.
-- **Coverage Report** (`.github/workflows/coverage.yml`): Generates JaCoCo HTML coverage reports and publishes them to GitHub Pages. Trigger manually via **Actions → Coverage Report → Run workflow** (optionally select a branch).
+- **Run Tests** (`.github/workflows/test.yml`): Runs tests for both microservices on every pull request targeting `main`, `master`, or `develop`. Installs `inventory-grpc-api` first so Query and Inventory can resolve the dependency.
+- **Coverage Report** (`.github/workflows/coverage.yml`): Generates JaCoCo HTML coverage reports and publishes them to GitHub Pages. Trigger manually via **Actions → Coverage Report → Run workflow** (optionally select a branch). Also installs `inventory-grpc-api` before verification.
 
 ### Enabling GitHub Pages for Coverage Reports
 

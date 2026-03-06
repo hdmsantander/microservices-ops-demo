@@ -2,6 +2,10 @@
 
 This document describes the system architecture, component relationships, and key operational flows for the microservices-ops-demo.
 
+## Project Overview
+
+The microservices-ops-demo is an observability-focused pet shop application built with Spring Boot 4.0.3. Two microservices—**Query** and **Inventory**—integrate with the Swagger PetStore API, publish and consume events via Kafka, and communicate over gRPC (with REST fallback). The stack includes Prometheus, Grafana, Zipkin, Elasticsearch, Kibana, and Kafka Connect for metrics, traces, and log analytics. Logs are enriched with `traceId` and `spanId` for correlation across services. The full environment runs under Docker Compose with layered startup, health checks, and resource limits.
+
 ## System Overview
 
 ```mermaid
@@ -399,13 +403,26 @@ flowchart LR
 
 ---
 
+## Key Design Decisions
+
+| Decision | Rationale |
+|----------|------------|
+| **Kafka Connect on port 8084** | landoop/fast-data-dev uses 8083; custom entrypoint patches Confluent config to avoid collision. |
+| **elk-init as single container** | Topic creation, connector registration, and Kibana data view run once before microservices start; no ad-hoc scripts. |
+| **Native Config Server backend** | Filesystem config in `config-server/src/main/resources/config/`; no Git required for demo. |
+| **gRPC for Query ↔ Inventory** | Lower latency than REST for sync; REST remains as fallback with circuit breaker. |
+| **Logs via Kafka** | Enables replay and batch ingestion; Kafka Connect Elasticsearch Sink writes to indices for Kibana. |
+
+---
+
 ## Related Documentation
 
 | Doc | Topic |
 |-----|-------|
 | [DOCKER.md](DOCKER.md) | Container best practices, startup order |
-| [ELK_LOGGING.md](ELK_LOGGING.md) | Elasticsearch, Kibana, log schema |
+| [ELK_LOGGING.md](ELK_LOGGING.md) | Elasticsearch, Kibana, Kafka Connect, log schema |
 | [LOGGING_KAFKA.md](LOGGING_KAFKA.md) | Log distribution, trace enrichment |
 | [GRPC_IMPLEMENTATION.md](GRPC_IMPLEMENTATION.md) | gRPC for Query ↔ Inventory |
 | [CONFIG_SERVER.md](CONFIG_SERVER.md) | Centralized configuration |
 | [PROFILING.md](PROFILING.md) | Load testing with Gatling |
+| [PR_REVIEW_REPORT.md](PR_REVIEW_REPORT.md) | Best practices review, recommendations |

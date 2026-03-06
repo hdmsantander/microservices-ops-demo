@@ -2,6 +2,16 @@
 
 Summary of changes from the observability proposal implementation and ELK integration.
 
+## Recent Fixes (PR Finalization)
+
+| Fix | Description |
+|-----|-------------|
+| **CI workflows** | Install `inventory-grpc-api` before Query/Inventory tests; resolves `Could not find artifact inventory-grpc-api` in GitHub Actions |
+| **Kafka Connect port** | Custom entrypoint (`docker-entrypoint-patch.sh`) forces `listeners=http://0.0.0.0:8084`; `rest.advertised.listener` uses listener name `http` (not full URL) to avoid `BindException` and `IllegalArgumentException` |
+| **Kibana healthcheck** | Accepts `level":"available"` (Kibana 8) and `state":"green"`; `SERVER_HOST=0.0.0.0`; increased `start_period` to 90s for migrations |
+| **logback-kafka-appender** | Downgraded to 0.1.0 (from 0.2.0-RC2) — 0.2.0+ removed `LayoutKafkaMessageEncoder`; fixes `ClassNotFoundException` on startup |
+| **TracingPropagationTest** | Explicit `@SpringBootTest(classes = InventoryApplication.class)` to avoid "Unable to find @SpringBootConfiguration" |
+
 ## Observability Stack
 
 - **Prometheus** (port 9412) — metrics from Actuator and exporters (Redis 9121, Elasticsearch 9114, Kafka 9308)
