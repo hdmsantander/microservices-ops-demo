@@ -145,13 +145,13 @@ flowchart TB
 
 ### Kafka Topics
 
-| Topic                               | Producer         | Consumer   | Description                      |
-| ----------------------------------- | ---------------- | ---------- | -------------------------------- |
-| `order-events-v1`                   | Inventory        | Query      | Order updates from Pet Store API |
-| `adoption-events-v1`                | Query            | Inventory  | Pet adoption events              |
-| `adoption-congratulation-events-v1` | Inventory        | (external) | Adoption confirmation events     |
-| `zipkin`                            | Query, Inventory | Zipkin     | Distributed traces               |
-| `application-logs`                 | Query, Inventory | Kafka Connect → Elasticsearch | Enriched JSON logs (traceId, service) for Kibana |
+| Topic                               | Producer         | Consumer                      | Description                                      |
+| ----------------------------------- | ---------------- | ----------------------------- | ------------------------------------------------ |
+| `order-events-v1`                   | Inventory        | Query                         | Order updates from Pet Store API                 |
+| `adoption-events-v1`                | Query            | Inventory                     | Pet adoption events                              |
+| `adoption-congratulation-events-v1` | Inventory        | (external)                    | Adoption confirmation events                     |
+| `zipkin`                            | Query, Inventory | Zipkin                        | Distributed traces                               |
+| `application-logs`                  | Query, Inventory | Kafka Connect → Elasticsearch | Enriched JSON logs (traceId, service) for Kibana |
 
 ## Running Tests
 
@@ -168,12 +168,12 @@ Tests use JUnit 5, Mockito, MockMvc, EmbeddedKafka. **80% instruction coverage**
 
 ### Documentation Index
 
-| Doc | Topic |
-|-----|-------|
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System overview, flow diagrams, design decisions |
-| [CONTAINER_SETUP.md](docs/CONTAINER_SETUP.md) | Container setup, environment, startup flow |
-| [PROFILING.md](docs/PROFILING.md) | Load testing with Gatling |
-| [KIBANA_DASHBOARDS_PROPOSAL.md](docs/KIBANA_DASHBOARDS_PROPOSAL.md) | Proposed Kibana dashboards |
+| Doc                                                                 | Topic                                            |
+| ------------------------------------------------------------------- | ------------------------------------------------ |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md)                             | System overview, flow diagrams, design decisions |
+| [CONTAINER_SETUP.md](docs/CONTAINER_SETUP.md)                       | Container setup, environment, startup flow       |
+| [PROFILING.md](docs/PROFILING.md)                                   | Load testing with Gatling                        |
+| [KIBANA_DASHBOARDS_PROPOSAL.md](docs/KIBANA_DASHBOARDS_PROPOSAL.md) | Proposed Kibana dashboards                       |
 
 ## Profiling and Load Testing
 
@@ -310,10 +310,10 @@ void registerGauge() {
 
 The ELK stack provides centralized log analytics:
 
-| Component | Port | Description |
-|-----------|------|-------------|
-| **Elasticsearch** | 9200 | Log storage; receives logs from Kafka Connect |
-| **Kibana** | 5601 | Log search, dashboards, trace correlation |
+| Component         | Port | Description                                                                                              |
+| ----------------- | ---- | -------------------------------------------------------------------------------------------------------- |
+| **Elasticsearch** | 9200 | Log storage; receives logs from Kafka Connect                                                            |
+| **Kibana**        | 5601 | Log search, dashboards, trace correlation                                                                |
 | **Kafka Connect** | 8084 | Elasticsearch Sink; ingests `application-logs` topic (8084 avoids conflict with landoop Connect on 8083) |
 
 **elk-init** runs at startup to create the `application-logs` Kafka topic, register the Kafka Connect Elasticsearch Sink connector, create the Kibana data view `application-logs*`, and import any `.ndjson` dashboards from `elk/init/dashboards/`.
@@ -325,7 +325,7 @@ The ELK stack provides centralized log analytics:
 Kibana is accessible at [http://localhost:5601](http://localhost:5601).
 
 - **Discover**: Search logs from Query and Inventory. Filter by `service`, `level`, `traceId`, etc.
-- **Dashboards**: Six dashboards are auto-imported from `elk/init/dashboards/`: Log Overview, Logs by Service & Level, Error & Warning Monitoring, Trace Correlation, Log Operations, Microservices Log Health. Each is a shell—add panels via Lens using the `application-logs*` data view. See [elk/kibana-dashboards/README.md](elk/kibana-dashboards/README.md) for panel configuration.
+- **Dashboards**: Six dashboards are auto-imported from `elk/init/dashboards/`: Log Overview, Logs by Service & Level, Error & Warning Monitoring, Trace Correlation, Log Operations, Microservices Log Health. Each is a shell—add panels via Lens using the `application-logs*` data view.
 - **Trace correlation**: Copy a `traceId` from Zipkin (http://localhost:9411) and filter in Kibana Discover to see logs across services.
 
 See [docs/KIBANA_DASHBOARDS_PROPOSAL.md](docs/KIBANA_DASHBOARDS_PROPOSAL.md) for proposed designs. Dashboards auto-imported from `elk/init/dashboards/*.ndjson`.
