@@ -164,7 +164,7 @@ flowchart TD
     Zipkin --> Inventory
 ```
 
-See [DOCKER.md](DOCKER.md) for health checks and graceful shutdown.
+See [CONTAINER_SETUP.md](CONTAINER_SETUP.md) for environment, ports, health checks, and graceful shutdown.
 
 ---
 
@@ -199,9 +199,7 @@ flowchart LR
     ES --> Kibana
 ```
 
-**Trace correlation**: Copy a `traceId` from Zipkin (http://localhost:9411) and filter in Kibana by `traceId: "..."` to see all logs for that request across Query and Inventory.
-
-See [LOGGING_KAFKA.md](LOGGING_KAFKA.md) and [ELK_LOGGING.md](ELK_LOGGING.md).
+**Trace correlation**: Copy a `traceId` from Zipkin (http://localhost:9411) and filter in Kibana by `traceId: "..."` to see all logs for that request across Query and Inventory. Logs are enriched with traceId, spanId, service, environment, host; errors include stack_trace. Flow: `kafka-logging` profile → `application-logs` topic → Kafka Connect Elasticsearch Sink → Elasticsearch → Kibana.
 
 ---
 
@@ -311,8 +309,9 @@ sequenceDiagram
 ```
 
 **Notes**:
-- PetStore demo API returns random results; 404 is expected and ignored by circuit breaker.
+- PetStore demo API returns random results; 404 is expected. Circuit breaker `ignoreExceptions` includes `HttpClientErrorException.NotFound` so 404s do not trip the circuit. Retry also ignores 404.
 - Query maintains local order DB; Kafka events keep it in sync.
+- OrderService: 3 iterations per `updateOrders()`, each fetches random order ID 1–10. IDs 6–10 return 404 (PetStore behavior).
 
 ---
 
@@ -419,10 +418,6 @@ flowchart LR
 
 | Doc | Topic |
 |-----|-------|
-| [DOCKER.md](DOCKER.md) | Container best practices, startup order |
-| [ELK_LOGGING.md](ELK_LOGGING.md) | Elasticsearch, Kibana, Kafka Connect, log schema |
-| [LOGGING_KAFKA.md](LOGGING_KAFKA.md) | Log distribution, trace enrichment |
-| [GRPC_IMPLEMENTATION.md](GRPC_IMPLEMENTATION.md) | gRPC for Query ↔ Inventory |
-| [CONFIG_SERVER.md](CONFIG_SERVER.md) | Centralized configuration |
+| [CONTAINER_SETUP.md](CONTAINER_SETUP.md) | Container setup, environment, ports, startup flow |
 | [PROFILING.md](PROFILING.md) | Load testing with Gatling |
-| [PR_REVIEW_REPORT.md](PR_REVIEW_REPORT.md) | Best practices review, recommendations |
+| [KIBANA_DASHBOARDS_PROPOSAL.md](KIBANA_DASHBOARDS_PROPOSAL.md) | Proposed Kibana dashboards |
