@@ -28,6 +28,9 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Install inventory-grpc-api
+        run: mvn -B install -DskipTests -f inventory-grpc-api/pom.xml
+
       - name: Generate coverage - query-microservice
         run: mvn -B verify -f query-microservice/pom.xml
 
