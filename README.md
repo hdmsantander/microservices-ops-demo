@@ -174,6 +174,7 @@ Tests use JUnit 5, Mockito, MockMvc, EmbeddedKafka. **80% instruction coverage**
 | [CONTAINER_SETUP.md](docs/CONTAINER_SETUP.md)                       | Container setup, environment, startup flow       |
 | [PROFILING.md](docs/PROFILING.md)                                   | Load testing with Gatling                        |
 | [KIBANA_DASHBOARDS_PROPOSAL.md](docs/KIBANA_DASHBOARDS_PROPOSAL.md) | Proposed Kibana dashboards                       |
+| [GROCERY_SEARCH_SYSTEM.md](docs/GROCERY_SEARCH_SYSTEM.md)           | Grocery search: architecture, CDC, tokenization  |
 
 ## Profiling and Load Testing
 

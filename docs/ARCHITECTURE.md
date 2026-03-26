@@ -421,3 +421,4 @@ flowchart LR
 | [CONTAINER_SETUP.md](CONTAINER_SETUP.md) | Container setup, environment, ports, startup flow |
 | [PROFILING.md](PROFILING.md) | Load testing with Gatling |
 | [KIBANA_DASHBOARDS_PROPOSAL.md](KIBANA_DASHBOARDS_PROPOSAL.md) | Proposed Kibana dashboards |
+| [GROCERY_SEARCH_SYSTEM.md](GROCERY_SEARCH_SYSTEM.md) | Grocery search system architecture, CDC model, tokenization strategy |
