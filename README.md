@@ -257,8 +257,9 @@ The Prometheus server is accessible at [http://localhost:9412](http://localhost:
 
 Grafana is accessible at [http://localhost:3000](http://localhost:3000) (admin/admin). Provisioned dashboards:
 
-- **Pet Shop Overview** – Ecosystem health (Redis, Kafka, Elasticsearch, Prometheus targets), adoptions, reservations, orders, reservation conflicts, query rates, latencies (pet, adoption, inventory, orders live/refresh/get). Links to Infrastructure dashboard.
-- **Infrastructure** – Redis, Elasticsearch (cluster status, nodes, docs, shards, index store), Kafka (brokers, consumer lag, producer rate), Spring Boot (JVM heap, HTTP rate & latency), Prometheus (targets up/down, scrape duration)
+- **Application observability** – HTTP 4xx/5xx rates by instance and path, HTTP latency p95, reservation create/release/cleanup timer averages (`reservation_*_time_seconds_*`). Links to Pet Shop Overview and Infrastructure.
+- **Pet Shop Overview** – Ecosystem health (Redis, Kafka, Elasticsearch, Prometheus targets), adoptions, reservations, orders, reservation conflicts, query rates, latencies (pet, adoption, inventory, orders live/refresh/get). Links to Application observability and Infrastructure.
+- **Infrastructure** – Redis, Elasticsearch (cluster status, nodes, docs, shards, index store), Kafka (brokers, consumer lag, producer rate), Spring Boot (JVM heap, HTTP rate & average latency), Prometheus (targets up/down, scrape duration). Links to Application observability and Pet Shop Overview.
 
 Use these dashboards for **numeric** RED/USE-style signals (rates, latency, saturation). Pair them with **Kibana** for log volume, severity, stack traces, and `traceId` correlation. Kibana counts log lines; Grafana shows Micrometer and exporter metrics—see the crosswalk in [docs/ELK_OPERATIONS.md](docs/ELK_OPERATIONS.md) so both UIs stay aligned during triage.
 
@@ -328,7 +329,7 @@ The ELK stack provides centralized log analytics:
 Kibana is accessible at [http://localhost:5601](http://localhost:5601).
 
 - **Discover**: Search logs from Query and Inventory. Filter by `service`, `level`, `traceId`, etc.
-- **Dashboards**: Eight dashboards are auto-imported from `elk/kibana-dashboards/` with pre-configured Lens panels (log overview with ERROR/WARN counts, service-specific Query/Inventory boards, errors/warnings, trace correlation, operations). Regenerate NDJSON after edits with `python3 elk/scripts/render_kibana_dashboards.py`. See [elk/kibana-dashboards/README.md](elk/kibana-dashboards/README.md).
+- **Dashboards**: Nine dashboards are auto-imported from `elk/kibana-dashboards/` with pre-configured Lens panels (log overview, severity by service, service-specific Query/Inventory boards, errors/warnings, trace correlation, operations, and combined health views). Regenerate NDJSON after edits with `python3 elk/scripts/render_kibana_dashboards.py`. See [elk/kibana-dashboards/README.md](elk/kibana-dashboards/README.md).
 - **Trace correlation**: Copy a `traceId` from Zipkin (http://localhost:9411) and filter in Kibana Discover to see logs across services.
 
 See [docs/KIBANA_DASHBOARDS_PROPOSAL.md](docs/KIBANA_DASHBOARDS_PROPOSAL.md) and [docs/ELK_OPERATIONS.md](docs/ELK_OPERATIONS.md) for the full proposal and lead-ops / architecture guidance.

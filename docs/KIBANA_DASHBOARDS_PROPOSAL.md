@@ -8,7 +8,7 @@ This document proposes Kibana dashboards tailored to the current log setup: stru
 
 For **how these dashboards fit Grafana metrics and Zipkin traces**, SRE-style signal split, and operational best practices, see [ELK_OPERATIONS.md](ELK_OPERATIONS.md).
 
-**Metrics alignment**: Kibana panels are **log document counts** (Lens count, date histograms, terms on `service` / `level` / `logger_name`). They do not query Prometheus. For the same incident window, compare with Grafana (**Pet Shop Overview**, **Infrastructure**): HTTP `http_server_requests_seconds_*`, Micrometer timers (`pet_query_time_seconds_*`, `inventory_query_time_seconds_*`, `orders_*_time_seconds_*`), business counters (`orders_updated_total`, `pet_adoptions_total`, `reservations_*`), JVM `jvm_memory_used_bytes`, Kafka lag `kafka_consumergroup_lag`, and Elasticsearch `elasticsearch_indices_docs`. See **“Kibana panels vs metrics in the Prometheus scrape stream”** in [ELK_OPERATIONS.md](ELK_OPERATIONS.md) for a full panel-by-panel map.
+**Metrics alignment**: Kibana panels are **log document counts** (Lens count, date histograms, terms on `service` / `level` / `logger_name`). They do not query Prometheus. For the same incident window, compare with Grafana (**Application observability**, **Pet Shop Overview**, **Infrastructure**): HTTP `http_server_requests_seconds_*` (including 4xx/5xx rates and p95 where histograms exist), Micrometer timers (`pet_query_time_seconds_*`, `inventory_query_time_seconds_*`, `orders_*_time_seconds_*`, `reservation_*_time_seconds_*`), business counters (`orders_updated_total`, `pet_adoptions_total`, `reservations_*`), JVM `jvm_memory_used_bytes`, Kafka lag `kafka_consumergroup_lag`, and Elasticsearch `elasticsearch_indices_docs`. See **“Kibana panels vs metrics in the Prometheus scrape stream”** in [ELK_OPERATIONS.md](ELK_OPERATIONS.md) for a full panel-by-panel map.
 
 ## Log Schema Reference
 
@@ -97,7 +97,7 @@ For **how these dashboards fit Grafana metrics and Zipkin traces**, SRE-style si
 | Warnings over time | Line chart | KQL: `service: "query-microservice" and level: WARN` |
 | Top loggers | Bar chart | KQL: `service: "query-microservice"`, terms on `logger_name` |
 
-Pair with **Grafana → Pet Shop Overview** for HTTP rates and latencies.
+Pair with **Grafana → Application observability** (HTTP 4xx/5xx, p95) and **Pet Shop Overview** for domain timers and rates.
 
 ---
 
@@ -106,6 +106,22 @@ Pair with **Grafana → Pet Shop Overview** for HTTP rates and latencies.
 **Purpose**: Single-service triage for the Inventory microservice (order sync, gRPC server, PetStore, Kafka producers).
 
 Same panel pattern as Dashboard 5 with KQL: `service: "inventory-microservice"`.
+
+---
+
+## Proposed Dashboard 7: Log Severity by Service
+
+**Purpose**: Incident triage with ERROR and WARN **split by `service`**, plus INFO volume and **exceptions with `stack_trace`** (metric counts in the selected time range).
+
+| Panel | Type | Configuration |
+|-------|------|----------------|
+| Errors over time by service | Line chart | KQL: `level: ERROR`, date histogram + terms on `service` |
+| Warnings over time by service | Line chart | KQL: `level: WARN`, same split |
+| INFO log lines | Lens metric | KQL: `level: INFO` |
+| ERROR with stack_trace | Lens metric | KQL: `level: ERROR and stack_trace: *` |
+| ERROR / WARN totals | Lens metrics | Same as Log Overview metrics for the picker range |
+
+Pair with **Grafana → Application observability** for HTTP 5xx/4xx and **Pet Shop Overview** for reservation timers when correlating log storms with API behavior.
 
 ---
 
@@ -119,6 +135,7 @@ Same panel pattern as Dashboard 5 with KQL: `service: "inventory-microservice"`.
 | Dashboard 4 | `log-operations.ndjson` |
 | (extra) Combined health | `microservices-health.ndjson`, `logs-by-service-level.ndjson` |
 | Dashboards 5–6 | `service-query-logs.ndjson`, `service-inventory-logs.ndjson` |
+| Dashboard 7 | `log-severity-by-service.ndjson` |
 
 ---
 

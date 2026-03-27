@@ -25,6 +25,7 @@ Then rebuild the init image if you use Docker: `docker compose build elk-init`.
 | **Trace Correlation** | Area: logs with `traceId` over time; description with Zipkin / Discover / Grafana links |
 | **Query — Application Logs** | Scoped to `service: "query-microservice"`: volume, ERROR/WARN trends, top loggers |
 | **Inventory — Application Logs** | Scoped to `service: "inventory-microservice"`: same pattern |
+| **Log Severity by Service** | ERROR/WARN over time split by `service`; INFO count; ERROR with `stack_trace`; totals |
 
 ## Data view
 
@@ -38,7 +39,7 @@ The `application-logs-dataview.ndjson` file creates the **Application Logs** dat
 
 ## Pairing with Grafana / Prometheus
 
-All Lens panels here are **counts and histograms over log documents** in `application-logs*`, not Prometheus queries. When a panel shows a spike in ERROR volume or log throughput, open Grafana (**Pet Shop Overview** or **Infrastructure**) for the **same time range** and compare HTTP timers, business counters, JVM, Kafka lag, and Elasticsearch index stats. See [docs/ELK_OPERATIONS.md](../../docs/ELK_OPERATIONS.md) (section *Kibana panels vs metrics in the Prometheus scrape stream*).
+All Lens panels here are **counts and histograms over log documents** in `application-logs*`, not Prometheus queries. When a panel shows a spike in ERROR volume or log throughput, open Grafana (**Application observability**, **Pet Shop Overview**, or **Infrastructure**) for the **same time range** and compare HTTP status rates, timers, business counters, JVM, Kafka lag, and Elasticsearch index stats. See [docs/ELK_OPERATIONS.md](../../docs/ELK_OPERATIONS.md) (section *Kibana panels vs metrics in the Prometheus scrape stream*).
 
 ## Trace correlation
 

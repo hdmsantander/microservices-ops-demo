@@ -1,0 +1,92 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [
+    { "asDropdown": false, "icon": "dashboard", "includeVars": false, "keepTime": true, "targetBlank": false, "title": "Pet Shop Overview", "tooltip": "Business metrics and domain timers", "type": "link", "url": "/d/pet-shop-overview" },
+    { "asDropdown": false, "icon": "dashboard", "includeVars": false, "keepTime": true, "targetBlank": false, "title": "Infrastructure", "tooltip": "Kafka lag, JVM, HTTP rates", "type": "link", "url": "/d/infrastructure" }
+  ],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 300,
+      "panels": [],
+      "title": "HTTP (Spring MVC) — errors and latency",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 15, "lineWidth": 2, "pointSize": 5 }, "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 12, "x": 0, "y": 1 },
+      "id": 301,
+      "options": { "legend": { "calcs": ["mean"], "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(rate(http_server_requests_seconds_count{status=~\"5..\"}[5m])) by (instance, uri) or vector(0)", "legendFormat": "{{instance}} {{uri}}", "refId": "A" }
+      ],
+      "title": "HTTP 5xx rate by instance & path",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "pointSize": 5 }, "unit": "reqps" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 12, "x": 12, "y": 1 },
+      "id": 302,
+      "options": { "legend": { "calcs": ["mean"], "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "sum(rate(http_server_requests_seconds_count{status=~\"4..\"}[5m])) by (instance, uri) or vector(0)", "legendFormat": "{{instance}} {{uri}}", "refId": "A" }
+      ],
+      "title": "HTTP 4xx rate by instance & path",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "pointSize": 5 }, "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 8 },
+      "id": 303,
+      "options": { "legend": { "calcs": ["mean"], "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket[5m])) by (le, instance, uri)) or vector(0)", "legendFormat": "p95 {{instance}} {{uri}}", "refId": "A" }
+      ],
+      "title": "HTTP request latency p95 (by instance & path)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 15 },
+      "id": 310,
+      "panels": [],
+      "title": "Reservation & cleanup timers (Query)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "pointSize": 5 }, "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 16 },
+      "id": 311,
+      "options": { "legend": { "calcs": ["mean"], "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "rate(reservation_create_time_seconds_sum[5m]) / rate(reservation_create_time_seconds_count[5m]) or vector(0)", "legendFormat": "reservation create (avg)", "refId": "A" },
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "rate(reservation_release_time_seconds_sum[5m]) / rate(reservation_release_time_seconds_count[5m]) or vector(0)", "legendFormat": "reservation release (avg)", "refId": "B" },
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "expr": "rate(reservation_cleanup_time_seconds_sum[5m]) / rate(reservation_cleanup_time_seconds_count[5m]) or vector(0)", "legendFormat": "reservation cleanup job (avg)", "refId": "C" }
+      ],
+      "title": "Reservation flow — average duration",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["observability", "http", "demo"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Application observability (HTTP & reservations)",
+  "uid": "application-observability",
+  "version": 1,
+  "weekStart": ""
+}

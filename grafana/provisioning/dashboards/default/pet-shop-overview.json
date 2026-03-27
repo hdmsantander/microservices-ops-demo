@@ -5,6 +5,7 @@
   "graphTooltip": 0,
   "id": null,
   "links": [
+    { "asDropdown": false, "icon": "dashboard", "includeVars": false, "keepTime": true, "targetBlank": false, "title": "Application observability", "tooltip": "HTTP 4xx/5xx, p95 latency, reservation timers", "type": "link", "url": "/d/application-observability" },
     { "asDropdown": false, "icon": "dashboard", "includeVars": false, "keepTime": true, "targetBlank": false, "title": "Infrastructure", "tooltip": "View infrastructure metrics", "type": "link", "url": "/d/infrastructure" }
   ],
   "liveNow": false,

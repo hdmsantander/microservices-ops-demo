@@ -691,6 +691,78 @@ def main() -> None:
         focus="Order sync scheduler, gRPC server, PetStore HTTP, Kafka producers.",
     )
 
+    # --- Log severity by service (errors/warnings over time + pipeline-oriented counts) ---
+    panels_sev = [
+        panel_lens_xy(
+            "Errors over time by service",
+            "level: ERROR",
+            "layer1",
+            "col-ts",
+            "col-count",
+            "1",
+            {"x": 0, "y": 0, "w": 12, "h": 14, "i": "1"},
+            series_type="line",
+            split_col="col-service",
+        ),
+        panel_lens_xy(
+            "Warnings over time by service",
+            "level: WARN",
+            "layer2",
+            "col-ts2",
+            "col-count2",
+            "2",
+            {"x": 12, "y": 0, "w": 12, "h": 14, "i": "2"},
+            series_type="line",
+            split_col="col-svc2",
+        ),
+        panel_lens_metric(
+            "INFO log lines (time range)",
+            "level: INFO",
+            "layer3",
+            "col-info",
+            "3",
+            {"x": 0, "y": 14, "w": 6, "h": 10, "i": "3"},
+        ),
+        panel_lens_metric(
+            "ERROR with stack_trace (time range)",
+            "level: ERROR and stack_trace: *",
+            "layer4",
+            "col-st",
+            "4",
+            {"x": 6, "y": 14, "w": 6, "h": 10, "i": "4"},
+        ),
+        panel_lens_metric(
+            "ERROR count (time range)",
+            "level: ERROR",
+            "layer5",
+            "col-err",
+            "5",
+            {"x": 12, "y": 14, "w": 6, "h": 10, "i": "5"},
+        ),
+        panel_lens_metric(
+            "WARN count (time range)",
+            "level: WARN",
+            "layer6",
+            "col-warn",
+            "6",
+            {"x": 18, "y": 14, "w": 6, "h": 10, "i": "6"},
+        ),
+    ]
+    write_ndjson(
+        out_dir / "log-severity-by-service.ndjson",
+        dashboard_doc(
+            dash_id="log-severity-by-service-demo",
+            title="Log Severity by Service",
+            description=(
+                "ERROR and WARN trends split by Query vs Inventory; INFO throughput and "
+                "exceptions with stack_trace. Pair with Grafana dashboards Application observability "
+                "and Pet Shop Overview for HTTP 5xx and reservation timers."
+            ),
+            panels=panels_sev,
+            layer_keys=["layer1", "layer2", "layer3", "layer4", "layer5", "layer6"],
+        ),
+    )
+
     print(f"Wrote dashboards to {out_dir}")
 
 

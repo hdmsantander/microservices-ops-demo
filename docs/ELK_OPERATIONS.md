@@ -63,7 +63,7 @@ These frameworks are widely used to decide **what** to measure; in this project 
 
 ## Kibana panels vs metrics in the Prometheus scrape stream
 
-Provisioned Kibana dashboards do **not** read Prometheus; every number is a **document count or aggregation** over `application-logs*`. Use the table below when triaging: start from a spike or drop in Kibana, then open Grafana (**Pet Shop Overview** or **Infrastructure**) on the **same time range** and check the paired metrics (all come from `/actuator/prometheus` on the apps plus exporters defined in [prometheus.yml](../prometheus/prometheus.yml)).
+Provisioned Kibana dashboards do **not** read Prometheus; every number is a **document count or aggregation** over `application-logs*`. Use the table below when triaging: start from a spike or drop in Kibana, then open Grafana (**Application observability**, **Pet Shop Overview**, or **Infrastructure**) on the **same time range** and check the paired metrics (all come from `/actuator/prometheus` on the apps plus exporters defined in [prometheus.yml](../prometheus/prometheus.yml)).
 
 | Kibana panel / query (concept) | What logs actually measure | Pair in Grafana (dashboard) — Prometheus family |
 |--------------------------------|----------------------------|--------------------------------------------------|
@@ -74,6 +74,8 @@ Provisioned Kibana dashboards do **not** read Prometheus; every number is a **do
 | WARN count | Documents with `level: WARN` | Often precursors to HTTP 4xx/5xx or circuit events; compare `http_server_requests_seconds_count` by `status` |
 | Errors / warnings over time | ERROR or WARN document histograms | **Timers**: `rate(*_time_seconds_count[5m])` vs `rate(*_time_seconds_sum[5m]) / rate(*_time_seconds_count[5m])` for `pet_query_time`, `pet_adoption_time`, `inventory_query_time`, `orders_*_time` (**Pet Shop Overview**) |
 | Errors by `service` | ERROR count grouped by `service` | Per-service HTTP load and status on **8085** / **8086**; JVM pressure `jvm_memory_used_bytes` (**Infrastructure**) |
+| ERROR/WARN **over time by service** (Log Severity dashboard) | Same as above, time-split per service | **Application observability**: `http_server_requests_seconds_count` by `status` (4xx/5xx rates); **Pet Shop Overview**: domain timers if one service degrades |
+| ERROR with `stack_trace` (metric) | Thrown exceptions logged with stack | **Application observability** 5xx rate; **Pet Shop Overview** business/error counters (`reservations_redis_unavailable_total`, etc.) |
 | Top error `logger_name` | Which Java loggers emit ERROR | Narrow code area; pair with **Zipkin** for that window if traces exist |
 | Logs with `traceId` (metric / time series) | Documents where trace ID is present | **Zipkin** trace count for the same interval; HTTP request rate as volume ceiling |
 | Logs per minute by service | Throughput of log lines | Same as “log volume” row; **Elasticsearch** `sum(elasticsearch_indices_docs)` growth (**Infrastructure**) as storage sanity check |
@@ -155,6 +157,7 @@ Reasonable next steps when moving from this demo toward something production-lik
 | `log-operations.ndjson` | Logs/minute by service, logger pie, traced log count |
 | `service-query-logs.ndjson` | Query-only (`service: "query-microservice"`) |
 | `service-inventory-logs.ndjson` | Inventory-only (`service: "inventory-microservice"`) |
+| `log-severity-by-service.ndjson` | ERROR/WARN over time split by service; INFO volume; ERROR with `stack_trace` |
 
 **Provisioning**: [docker-init.sh](../elk/init/docker-init.sh) and [provision-kibana.sh](../elk/provision-kibana.sh) treat Kibana imports as successful only when the API returns `"success": true`, and import NDJSON in sorted order so the data view is created before dependent dashboards.
 
@@ -197,7 +200,7 @@ The items below extend the model when you add fields, indices, or operational sc
 
 | UI | Port | Role |
 |----|------|------|
-| Grafana | 3000 | Pet Shop Overview, Infrastructure—RED/USE-style metrics, JVM, Kafka lag, Elasticsearch health |
+| Grafana | 3000 | **Application observability** (HTTP 4xx/5xx, p95, reservation timers), Pet Shop Overview, Infrastructure |
 | Prometheus | 9412 | Raw targets and scrape health |
 | Zipkin | 9411 | Trace timeline; source of `traceId` for Kibana |
 | Kibana | 5601 | Log search, dashboards on `application-logs*` |
