@@ -44,4 +44,4 @@ Copy a `traceId` from Zipkin (http://localhost:9411), then in Kibana **Discover*
 traceId: "YOUR_TRACE_ID"
 ```
 
-See [docs/KIBANA_DASHBOARDS_PROPOSAL.md](../../docs/KIBANA_DASHBOARDS_PROPOSAL.md) and [ELK update.md](../../ELK%20update.md) for the full proposal and guidance.
+See [docs/KIBANA_DASHBOARDS_PROPOSAL.md](../../docs/KIBANA_DASHBOARDS_PROPOSAL.md) and [docs/ELK_OPERATIONS.md](../../docs/ELK_OPERATIONS.md) for the full proposal and ops guidance.

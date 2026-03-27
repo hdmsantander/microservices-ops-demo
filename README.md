@@ -174,7 +174,7 @@ Tests use JUnit 5, Mockito, MockMvc, EmbeddedKafka. **80% instruction coverage**
 | [CONTAINER_SETUP.md](docs/CONTAINER_SETUP.md)                       | Container setup, environment, startup flow       |
 | [PROFILING.md](docs/PROFILING.md)                                   | Load testing with Gatling                        |
 | [KIBANA_DASHBOARDS_PROPOSAL.md](docs/KIBANA_DASHBOARDS_PROPOSAL.md) | Proposed Kibana dashboards (panels + provisioning) |
-| [ELK update.md](ELK%20update.md)                                   | Kibana best practices, dashboard model, ops/architect guidance |
+| [ELK_OPERATIONS.md](docs/ELK_OPERATIONS.md)                         | Kibana ops guidance: metrics vs logs, Grafana/Zipkin pairing, best practices |
 
 ## Profiling and Load Testing
 
@@ -260,6 +260,8 @@ Grafana is accessible at [http://localhost:3000](http://localhost:3000) (admin/a
 - **Pet Shop Overview** – Ecosystem health (Redis, Kafka, Elasticsearch, Prometheus targets), adoptions, reservations, orders, reservation conflicts, query rates, latencies (pet, adoption, inventory, orders live/refresh/get). Links to Infrastructure dashboard.
 - **Infrastructure** – Redis, Elasticsearch (cluster status, nodes, docs, shards, index store), Kafka (brokers, consumer lag, producer rate), Spring Boot (JVM heap, HTTP rate & latency), Prometheus (targets up/down, scrape duration)
 
+Use these dashboards for **numeric** RED/USE-style signals (rates, latency, saturation). Pair them with **Kibana** for log volume, severity, stack traces, and `traceId` correlation—see [docs/ELK_OPERATIONS.md](docs/ELK_OPERATIONS.md).
+
 ### Adding dashboards
 
 Dashboards are provisioned from `grafana/provisioning/dashboards/default/`. Modify the JSON files or add new ones to extend.
@@ -329,7 +331,7 @@ Kibana is accessible at [http://localhost:5601](http://localhost:5601).
 - **Dashboards**: Eight dashboards are auto-imported from `elk/kibana-dashboards/` with pre-configured Lens panels (log overview with ERROR/WARN counts, service-specific Query/Inventory boards, errors/warnings, trace correlation, operations). Regenerate NDJSON after edits with `python3 elk/scripts/render_kibana_dashboards.py`. See [elk/kibana-dashboards/README.md](elk/kibana-dashboards/README.md).
 - **Trace correlation**: Copy a `traceId` from Zipkin (http://localhost:9411) and filter in Kibana Discover to see logs across services.
 
-See [docs/KIBANA_DASHBOARDS_PROPOSAL.md](docs/KIBANA_DASHBOARDS_PROPOSAL.md) and [ELK update.md](ELK%20update.md) for the full proposal and ops/architect guidance.
+See [docs/KIBANA_DASHBOARDS_PROPOSAL.md](docs/KIBANA_DASHBOARDS_PROPOSAL.md) and [docs/ELK_OPERATIONS.md](docs/ELK_OPERATIONS.md) for the full proposal and lead-ops / architecture guidance.
 
 ## Zipkin server
 

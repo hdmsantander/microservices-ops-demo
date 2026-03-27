@@ -421,3 +421,4 @@ flowchart LR
 | [CONTAINER_SETUP.md](CONTAINER_SETUP.md) | Container setup, environment, ports, startup flow |
 | [PROFILING.md](PROFILING.md) | Load testing with Gatling |
 | [KIBANA_DASHBOARDS_PROPOSAL.md](KIBANA_DASHBOARDS_PROPOSAL.md) | Proposed Kibana dashboards |
+| [ELK_OPERATIONS.md](ELK_OPERATIONS.md) | Logs vs metrics/traces, Kibana best practices, SRE framing |
