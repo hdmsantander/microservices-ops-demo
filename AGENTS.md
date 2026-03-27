@@ -2,61 +2,65 @@
 
 ## Cursor Cloud specific instructions
 
-### Overview
-
-This is a Spring Boot 4.0.3 microservices observability demo ("Pet Shop"). Two microservices (Query on :8086, Inventory on :8085) integrate with the external Swagger PetStore API, communicate via gRPC and REST, and exchange events over Kafka. See `README.md` for full architecture details.
-
-### Prerequisites (already installed in snapshot)
-
-- Java 21, Docker (with fuse-overlayfs + iptables-legacy for nested container support)
-- Maven 3.9.6 (via `./mvnw` wrappers in each module)
+### Project overview
+Microservices OPS Demo — a Spring Boot 4.0.3 / Java 21 pet shop system with two microservices (Query on port 8086, Inventory on port 8085/gRPC 9090), communicating via Kafka and gRPC. See `README.md` for full details.
 
 ### Build order
-
-The `inventory-grpc-api` module **must** be installed to the local Maven repo before building Query or Inventory:
+`inventory-grpc-api` **must** be installed to the local Maven repo before building Query or Inventory:
 ```
-cd inventory-grpc-api && ../query-microservice/mvnw -q install -DskipTests
+cd inventory-grpc-api && ./mvnw install -DskipTests
 ```
-Note: `inventory-grpc-api` does not have its own `.mvn/wrapper/` directory; use the wrapper from another module or the downloaded Maven binary at `~/.m2/wrapper/dists/apache-maven-3.9.6/*/bin/mvn`.
 
 ### Running tests
-
-Tests use EmbeddedKafka and mocks — no Docker required:
 ```
 cd query-microservice && ./mvnw verify
 cd inventory-microservice && ./mvnw verify
 ```
-Both enforce 80% JaCoCo coverage.
+Tests use EmbeddedKafka and mocks — no Docker or external services needed. 80% JaCoCo coverage is enforced.
 
-### Running the application locally
+**Known issue:** `Resilience4jIntegrationTest.inventoryService_returns_inventory_when_api_succeeds` in the inventory microservice may fail locally due to test ordering sensitivity, while CI passes. This is a pre-existing issue, not an environment problem.
 
-1. **Start infrastructure** (Redis + Kafka are required):
+### Running the application locally (dev mode)
+
+1. Start infrastructure via Docker Compose minimal stack:
    ```
-   docker run -d --name redis-demo --network host redis:7-alpine
-   docker run -d --name kafka-demo --network host -e ADV_HOST=127.0.0.1 -e RUNTESTS=0 landoop/fast-data-dev
+   docker compose -f docker-compose-minimal.yml up -d
    ```
-   Wait ~30s for Kafka to be ready: `docker exec kafka-demo kafka-topics --bootstrap-server localhost:9092 --list`
+   This starts Redis (6379), Kafka (9092), Zipkin (9411), Prometheus (9412), and redis-exporter.
 
-2. **Start microservices** (each in a separate terminal):
+2. Start microservices (each in a separate terminal):
    ```
-   cd inventory-microservice && ./mvnw spring-boot:run -Dspring-boot.run.profiles=development
-   cd query-microservice && ./mvnw spring-boot:run -Dspring-boot.run.profiles=development
+   cd inventory-microservice && ./mvnw spring-boot:run
+   cd query-microservice && ./mvnw spring-boot:run
    ```
 
-3. **Verify**: `curl http://localhost:8086/v1/pets?status=available`
+3. Swagger UIs: http://localhost:8086/swagger-ui.html (Query), http://localhost:8085/swagger-ui.html (Inventory)
 
-### Docker Compose gotchas in Cloud Agent VMs
+### Docker-in-Docker cgroup fix (Cloud Agent VMs)
+The Cloud Agent VM runs inside a container with cgroupv2 in `domain threaded` mode, which prevents Docker containers from starting. Before starting `dockerd`, run:
+```bash
+echo "-cpu -pids -cpuset -io -memory -hugetlb" | sudo tee /sys/fs/cgroup/cgroup.subtree_control
+sudo mkdir -p /sys/fs/cgroup/init
+for pid in $(cat /sys/fs/cgroup/cgroup.procs 2>/dev/null); do
+  echo $pid | sudo tee /sys/fs/cgroup/init/cgroup.procs >/dev/null 2>&1 || true
+done
+echo "+cpu +io +memory +pids" | sudo tee /sys/fs/cgroup/cgroup.subtree_control
+```
+Then start dockerd normally. Without this, containers fail with "cannot enter cgroupv2 ... domain controllers -- it is in an invalid state".
 
-`docker compose` with resource limits (`deploy.resources.limits`) fails in the nested cgroup v2 environment due to "threaded mode" cgroup errors. Workaround: run infrastructure containers directly with `docker run` (no resource limits), or use `./start.sh --tests-only` for test-only mode which requires no Docker.
+### Lint
+No dedicated linter config (ESLint/Checkstyle) is configured in this repo. Maven `verify` runs JaCoCo coverage checks which serve as the quality gate.
 
-### Key API endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/v1/pets?status=available` | GET | List pets from PetStore |
-| `/v1/inventory` | GET | Get inventory counts |
-| `/v1/pets/{id}/reserve` | POST | Reserve a pet (returns reservationId) |
-| `/v1/pets/{id}/adopt` | POST | Adopt pet (needs `X-Reservation-Token` header) |
-| `/v1/orders` | GET | List orders synced via Kafka |
-| `/v1/orders/{id}/live` | GET | Fetch live order from Inventory |
-| `/swagger-ui.html` | GET | Swagger UI (Query :8086, Inventory :8085) |
+### Key ports
+| Service | Port |
+|---------|------|
+| Inventory REST | 8085 |
+| Query REST | 8086 |
+| gRPC | 9090 |
+| Config Server | 8888 |
+| Admin Server | 8089 |
+| Kafka | 9092 |
+| Redis | 6379 |
+| Zipkin | 9411 |
+| Prometheus | 9412 |
+| Kafka Web UI | 3030 |
