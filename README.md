@@ -173,7 +173,8 @@ Tests use JUnit 5, Mockito, MockMvc, EmbeddedKafka. **80% instruction coverage**
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md)                             | System overview, flow diagrams, design decisions |
 | [CONTAINER_SETUP.md](docs/CONTAINER_SETUP.md)                       | Container setup, environment, startup flow       |
 | [PROFILING.md](docs/PROFILING.md)                                   | Load testing with Gatling                        |
-| [KIBANA_DASHBOARDS_PROPOSAL.md](docs/KIBANA_DASHBOARDS_PROPOSAL.md) | Proposed Kibana dashboards                       |
+| [KIBANA_DASHBOARDS_PROPOSAL.md](docs/KIBANA_DASHBOARDS_PROPOSAL.md) | Proposed Kibana dashboards (panels + provisioning) |
+| [ELK update.md](ELK%20update.md)                                   | Kibana best practices, dashboard model, ops/architect guidance |
 
 ## Profiling and Load Testing
 
@@ -325,10 +326,10 @@ The ELK stack provides centralized log analytics:
 Kibana is accessible at [http://localhost:5601](http://localhost:5601).
 
 - **Discover**: Search logs from Query and Inventory. Filter by `service`, `level`, `traceId`, etc.
-- **Dashboards**: Six dashboards are auto-imported from `elk/kibana-dashboards/` with pre-configured Lens panels (log volume, by service/level, errors/warnings, trace correlation). See [elk/kibana-dashboards/README.md](elk/kibana-dashboards/README.md).
+- **Dashboards**: Eight dashboards are auto-imported from `elk/kibana-dashboards/` with pre-configured Lens panels (log overview with ERROR/WARN counts, service-specific Query/Inventory boards, errors/warnings, trace correlation, operations). Regenerate NDJSON after edits with `python3 elk/scripts/render_kibana_dashboards.py`. See [elk/kibana-dashboards/README.md](elk/kibana-dashboards/README.md).
 - **Trace correlation**: Copy a `traceId` from Zipkin (http://localhost:9411) and filter in Kibana Discover to see logs across services.
 
-See [docs/KIBANA_DASHBOARDS_PROPOSAL.md](docs/KIBANA_DASHBOARDS_PROPOSAL.md) for the full proposal.
+See [docs/KIBANA_DASHBOARDS_PROPOSAL.md](docs/KIBANA_DASHBOARDS_PROPOSAL.md) and [ELK update.md](ELK%20update.md) for the full proposal and ops/architect guidance.
 
 ## Zipkin server
 
