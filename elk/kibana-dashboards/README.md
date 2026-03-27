@@ -36,6 +36,10 @@ The `application-logs-dataview.ndjson` file creates the **Application Logs** dat
 2. Save `.ndjson` files into this directory.
 3. Rebuild and restart: `docker compose build elk-init && docker compose up -d`.
 
+## Pairing with Grafana / Prometheus
+
+All Lens panels here are **counts and histograms over log documents** in `application-logs*`, not Prometheus queries. When a panel shows a spike in ERROR volume or log throughput, open Grafana (**Pet Shop Overview** or **Infrastructure**) for the **same time range** and compare HTTP timers, business counters, JVM, Kafka lag, and Elasticsearch index stats. See [docs/ELK_OPERATIONS.md](../../docs/ELK_OPERATIONS.md) (section *Kibana panels vs metrics in the Prometheus scrape stream*).
+
 ## Trace correlation
 
 Copy a `traceId` from Zipkin (http://localhost:9411), then in Kibana **Discover** (data view **Application Logs**) filter with:

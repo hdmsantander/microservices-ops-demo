@@ -8,6 +8,8 @@ This document proposes Kibana dashboards tailored to the current log setup: stru
 
 For **how these dashboards fit Grafana metrics and Zipkin traces**, SRE-style signal split, and operational best practices, see [ELK_OPERATIONS.md](ELK_OPERATIONS.md).
 
+**Metrics alignment**: Kibana panels are **log document counts** (Lens count, date histograms, terms on `service` / `level` / `logger_name`). They do not query Prometheus. For the same incident window, compare with Grafana (**Pet Shop Overview**, **Infrastructure**): HTTP `http_server_requests_seconds_*`, Micrometer timers (`pet_query_time_seconds_*`, `inventory_query_time_seconds_*`, `orders_*_time_seconds_*`), business counters (`orders_updated_total`, `pet_adoptions_total`, `reservations_*`), JVM `jvm_memory_used_bytes`, Kafka lag `kafka_consumergroup_lag`, and Elasticsearch `elasticsearch_indices_docs`. See **“Kibana panels vs metrics in the Prometheus scrape stream”** in [ELK_OPERATIONS.md](ELK_OPERATIONS.md) for a full panel-by-panel map.
+
 ## Log Schema Reference
 
 | Field | Type | Description |
@@ -155,6 +157,15 @@ message: *timeout*
 environment: "development"
 host: "hostname"
 ```
+
+### Query performance (short checklist)
+
+1. Set the **time range** before running heavy Discover searches.
+2. Prefer filters on **keyword** fields (`level`, `service`, `logger_name`, `traceId`, `environment`) before searching `message`.
+3. Avoid leading wildcards on `message`; narrow with `level` and `service` first.
+4. Use **Discover** for recent raw errors with full `message`; avoid large Lens tables on analyzed text.
+
+For pipeline tuning (Connect batching, ES refresh, ILM) and ELK hardening ideas, see [ELK_OPERATIONS.md](ELK_OPERATIONS.md).
 
 ---
 

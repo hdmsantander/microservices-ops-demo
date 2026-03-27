@@ -260,7 +260,7 @@ Grafana is accessible at [http://localhost:3000](http://localhost:3000) (admin/a
 - **Pet Shop Overview** – Ecosystem health (Redis, Kafka, Elasticsearch, Prometheus targets), adoptions, reservations, orders, reservation conflicts, query rates, latencies (pet, adoption, inventory, orders live/refresh/get). Links to Infrastructure dashboard.
 - **Infrastructure** – Redis, Elasticsearch (cluster status, nodes, docs, shards, index store), Kafka (brokers, consumer lag, producer rate), Spring Boot (JVM heap, HTTP rate & latency), Prometheus (targets up/down, scrape duration)
 
-Use these dashboards for **numeric** RED/USE-style signals (rates, latency, saturation). Pair them with **Kibana** for log volume, severity, stack traces, and `traceId` correlation—see [docs/ELK_OPERATIONS.md](docs/ELK_OPERATIONS.md).
+Use these dashboards for **numeric** RED/USE-style signals (rates, latency, saturation). Pair them with **Kibana** for log volume, severity, stack traces, and `traceId` correlation. Kibana counts log lines; Grafana shows Micrometer and exporter metrics—see the crosswalk in [docs/ELK_OPERATIONS.md](docs/ELK_OPERATIONS.md) so both UIs stay aligned during triage.
 
 ### Adding dashboards
 

@@ -61,6 +61,67 @@ These frameworks are widely used to decide **what** to measure; in this project 
 
 ---
 
+## Kibana panels vs metrics in the Prometheus scrape stream
+
+Provisioned Kibana dashboards do **not** read Prometheus; every number is a **document count or aggregation** over `application-logs*`. Use the table below when triaging: start from a spike or drop in Kibana, then open Grafana (**Pet Shop Overview** or **Infrastructure**) on the **same time range** and check the paired metrics (all come from `/actuator/prometheus` on the apps plus exporters defined in [prometheus.yml](../prometheus/prometheus.yml)).
+
+| Kibana panel / query (concept) | What logs actually measure | Pair in Grafana (dashboard) — Prometheus family |
+|--------------------------------|----------------------------|--------------------------------------------------|
+| Log volume over time (all levels) | Emitted log lines per bucket | **Traffic proxy**: `rate(http_server_requests_seconds_count[5m])` by instance; **Pet Shop Overview** — `pets_queried_total`, `inventory_queries_total`, `orders_queries_total`; Kafka: `rate(kafka_producer_record_send_total[5m])` (**Infrastructure**) |
+| Volume split by `service` | Lines tagged `query-microservice` vs `inventory-microservice` | Same HTTP/timer metrics filtered mentally by instance (**8086** = Query, **8085** = Inventory) or use `instance` label on scrape targets |
+| Volume by `level` | INFO / WARN / ERROR counts | **Errors (HTTP)**: `http_server_requests_seconds_count` with `status=~"5.."`; not identical to log ERROR but often rises together |
+| ERROR count (Lens metric, time picker) | Documents with `level: ERROR` | **Latency/errors context**: timer error rates if instrumented; business counters dropping — `orders_updated_total`, `pet_adoptions_total` (**Pet Shop Overview**); Redis failures `reservations_redis_unavailable_total` |
+| WARN count | Documents with `level: WARN` | Often precursors to HTTP 4xx/5xx or circuit events; compare `http_server_requests_seconds_count` by `status` |
+| Errors / warnings over time | ERROR or WARN document histograms | **Timers**: `rate(*_time_seconds_count[5m])` vs `rate(*_time_seconds_sum[5m]) / rate(*_time_seconds_count[5m])` for `pet_query_time`, `pet_adoption_time`, `inventory_query_time`, `orders_*_time` (**Pet Shop Overview**) |
+| Errors by `service` | ERROR count grouped by `service` | Per-service HTTP load and status on **8085** / **8086**; JVM pressure `jvm_memory_used_bytes` (**Infrastructure**) |
+| Top error `logger_name` | Which Java loggers emit ERROR | Narrow code area; pair with **Zipkin** for that window if traces exist |
+| Logs with `traceId` (metric / time series) | Documents where trace ID is present | **Zipkin** trace count for the same interval; HTTP request rate as volume ceiling |
+| Logs per minute by service | Throughput of log lines | Same as “log volume” row; **Elasticsearch** `sum(elasticsearch_indices_docs)` growth (**Infrastructure**) as storage sanity check |
+
+**Important distinctions**
+
+- **Log ERROR ≠ HTTP 5xx**: stack traces and `logger_name` explain failures that metrics may not label per route until you add structured fields (see below).
+- **`service` (logs) ↔ `instance` (Prometheus)**: logs carry `service`; Prometheus uses host/port on scrape targets — map **8086** to Query and **8085** to Inventory when comparing.
+- **Elasticsearch document counts** in Grafana reflect **all** indices the exporter sees; Kibana panels target **`application-logs*`** only — use both to detect pipeline issues (ES growing but Kibana flat → Connect/consumption lag: **Infrastructure** `kafka_consumergroup_lag`).
+
+---
+
+## Log querying and performance (Kibana / Elasticsearch)
+
+These practices keep searches and dashboards cheap as `application-logs` grows:
+
+1. **Bound time first**: Always set the time picker (or dashboard default) before heavy Discover queries; full-index scans dominate cost.
+2. **Filter on keyword fields**: Prefer `level`, `service`, `logger_name`, `environment`, `host`, `traceId` — they map to efficient filters. Use **Discover** filters or KQL, not only free-text search, when possible.
+3. **Full-text (`message`) last**: Leading wildcards (`*timeout`) and broad `message:` queries are expensive on analyzed text. Narrow with `level: ERROR` and `service: "query-microservice"` first, then search message.
+4. **Discover vs Lens tables**: For “last N errors with full message”, use **Discover** with columns; Lens tables on analyzed `message` are fragile (see proposal doc). Prefer `logger_name` + `stack_trace` for aggregation-friendly views.
+5. **Dashboard auto-refresh**: Use a conservative interval (for example 1m) for demos; shorter intervals multiply ES load with every viewer.
+6. **Aggregation size**: Keep “Top N” loggers/services to modest N (10–25) for responsiveness.
+7. **Correlation workflow**: `traceId` exact match from Zipkin is cheap; avoid `traceId: *` alone on huge windows without additional filters.
+
+**Pipeline / stack tuning (beyond the demo)**
+
+- **Kafka Connect sink**: For higher throughput, tune connector `batch.size`, `linger.ms`, and max tasks in line with [Confluent Elasticsearch Sink](https://docs.confluent.io/kafka-connect-elasticsearch/current/) guidance; watch **consumer lag** in Grafana while changing batch behavior.
+- **Elasticsearch**: Demo uses a single node and 512m heap — **not** sized for sustained high log rates. In production: ILM or rollover policies, appropriate shard count, and `refresh_interval` tradeoffs for indexing vs search freshness.
+- **Indices**: One data stream or index pattern per concern (app vs audit vs Connect logs) avoids giant mixed `application-logs*` and simplifies retention.
+
+---
+
+## ELK stack improvements (roadmap)
+
+Reasonable next steps when moving from this demo toward something production-like:
+
+| Area | Current demo | Improvement |
+|------|----------------|-------------|
+| **Security** | Elasticsearch/Kibana without auth | Enable Elastic security, TLS, roles for Kibana spaces and index privileges |
+| **Lifecycle** | Logs accumulate in `application-logs*` | ILM: hot–warm–delete or rollover by size/age; shrink retention for noisy indices |
+| **Ingest** | Kafka Connect JSON sink | Optional ingest pipelines (enrich, truncate `stack_trace` length, PII scrub); explicit mappings for fields you aggregate on (`message.keyword` if needed) |
+| **Observability of ELK** | Grafana ES exporter only | Stack Monitoring or Metricbeat for ES/Kibana/Connect JVM and queue depth |
+| **Resilience** | Single ES node | Multi-node cluster, snapshot repository, documented restore runbook |
+| **Connect ops** | Connector registered once by elk-init | Health checks on connector `FAILED` state; alert on task failures (metrics or log scrape from Connect) |
+| **Cost / quality** | All levels to Kafka | Sampling for INFO, guaranteed ERROR/WARN; dynamic log level via Spring Boot actuator where appropriate |
+
+---
+
 ## What to log and structure (ops + architect)
 
 **Already strong in this project**: JSON logs, trace MDC, `service` / `environment` / `host`, Kafka pipeline into ES.
