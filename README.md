@@ -161,7 +161,7 @@ flowchart TB
 python3 scripts/validate_observability_assets.py
 ```
 
-The same check runs in **GitHub Actions** on pull requests before microservice tests. See [docs/ELK_OPERATIONS.md](docs/ELK_OPERATIONS.md) for deeper ELK validation options (static vs runtime).
+The same check runs in **GitHub Actions** on pull requests and in the **Coverage Report** workflow before Maven. **`./start.sh`** also runs it automatically before **minimal**, **full**, **profile**, and **`--tests-only`** (same test suite entry point as CI). See [docs/ELK_OPERATIONS.md](docs/ELK_OPERATIONS.md) for deeper ELK validation options (static vs runtime).
 
 ```bash
 # All tests (use ./mvnw in cloud/CI)

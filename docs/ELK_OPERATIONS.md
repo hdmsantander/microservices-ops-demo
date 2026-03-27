@@ -237,7 +237,7 @@ It verifies:
 - **`application-logs-dataview.ndjson` sorts first** (required so elk-init imports the data view before dashboards)
 - Dashboard objects reference the **index-pattern** id `application-logs`
 
-This runs on **pull requests** in GitHub Actions before the Maven test jobs.
+This runs on **pull requests** in GitHub Actions before the Maven test jobs, in the **Coverage Report** workflow before `mvn verify`, and locally via **`./start.sh`** before **minimal**, **full**, **profile**, and **`--tests-only`** (phase: *Observability assets validation*).
 
 ### Runtime / integration tests (optional)
 
