@@ -155,6 +155,14 @@ flowchart TB
 
 ## Running Tests
 
+**Observability assets** (Grafana JSON, Kibana NDJSON sort order and references, Prometheus config, dashboard generator syntax) are checked without Docker:
+
+```bash
+python3 scripts/validate_observability_assets.py
+```
+
+The same check runs in **GitHub Actions** on pull requests before microservice tests. See [docs/ELK_OPERATIONS.md](docs/ELK_OPERATIONS.md) for deeper ELK validation options (static vs runtime).
+
 ```bash
 # All tests (use ./mvnw in cloud/CI)
 cd query-microservice && ./mvnw test

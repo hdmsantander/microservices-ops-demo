@@ -218,6 +218,41 @@ The items below extend the model when you add fields, indices, or operational sc
 
 ---
 
+## Validation and testing
+
+### Static checks (CI, no running stack)
+
+The repo includes **`scripts/validate_observability_assets.py`**. Run from the repository root:
+
+```bash
+python3 scripts/validate_observability_assets.py
+```
+
+It verifies:
+
+- `elk/scripts/render_kibana_dashboards.py` compiles
+- Grafana dashboard JSON under `grafana/provisioning/dashboards/default/` parses
+- `prometheus/prometheus.yml` is present and (if **PyYAML** is installed) parses as YAML
+- Each `elk/kibana-dashboards/*.ndjson` line is valid JSON
+- **`application-logs-dataview.ndjson` sorts first** (required so elk-init imports the data view before dashboards)
+- Dashboard objects reference the **index-pattern** id `application-logs`
+
+This runs on **pull requests** in GitHub Actions before the Maven test jobs.
+
+### Runtime / integration tests (optional)
+
+Full ELK validation needs Elasticsearch, Kibana, Kafka, and Connect running. Possible approaches:
+
+| Approach | What it proves | Cost |
+|----------|----------------|------|
+| **Manual / demo** | `docker compose up`, open Kibana Discover, trigger app logs | Human time |
+| **Scripted smoke** | After `compose up`, `curl` ES `/_cluster/health`, Kibana `/api/status`, Connect `/connectors`, optionally POST a sample log doc and assert search hit | Medium CI time, needs `docker compose` in CI |
+| **Contract tests** | Assert connector JSON in `elk/init-connector.sh` matches expected keys; shellcheck on `docker-init.sh` | Low |
+
+End-to-end tests in CI for Kibana **saved object import** are brittle (version skew, timing). Prefer **static NDJSON validation** plus **manual or scheduled smoke** against a pinned Elastic stack version for upgrades.
+
+---
+
 ## References
 
 - Elastic: [Dashboard guidelines](https://www.elastic.co/guide/en/integrations-developer/current/dashboard-guidelines.html)
