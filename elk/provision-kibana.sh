@@ -6,6 +6,10 @@ set -e
 KIBANA_URL="${1:-http://localhost:5601}"
 DASHBOARDS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/kibana-dashboards" && pwd)"
 
+kibana_import_succeeded() {
+  grep -qE '"success"[[:space:]]*:[[:space:]]*true' <<<"$1"
+}
+
 echo "Waiting for Kibana at $KIBANA_URL..."
 for i in $(seq 1 60); do
   if curl -sSf "$KIBANA_URL/api/status" &>/dev/null; then
@@ -32,15 +36,22 @@ else
   fi
 fi
 
-# Import dashboards if ndjson exists
+# Import dashboards if ndjson exists (sorted so data view ndjson runs before dependent dashboards)
 if [[ -d "$DASHBOARDS_DIR" ]]; then
-  for f in "$DASHBOARDS_DIR"/*.ndjson; do
+  while IFS= read -r f; do
     [[ -f "$f" ]] || continue
     echo "Importing $(basename "$f")..."
-    curl -sS -X POST -H "kbn-xsrf: true" \
+    resp=$(curl -sS -X POST -H "kbn-xsrf: true" \
       -F "file=@$f" \
-      "$KIBANA_URL/api/saved_objects/_import?overwrite=true" | grep -q '"success"' && echo "  Imported." || echo "  Skipped or failed."
-  done
+      "$KIBANA_URL/api/saved_objects/_import?overwrite=true") || resp=""
+    if kibana_import_succeeded "$resp"; then
+      echo "  Imported."
+    else
+      echo "  Import failed (Kibana API did not return success:true)." >&2
+      echo "$resp" | head -c 500 >&2 || true
+      echo "" >&2
+    fi
+  done < <(printf '%s\n' "$DASHBOARDS_DIR"/*.ndjson 2>/dev/null | sort)
 fi
 
 echo ""

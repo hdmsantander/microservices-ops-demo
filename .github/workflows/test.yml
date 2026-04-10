@@ -11,6 +11,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate observability assets (Grafana, Kibana NDJSON, Prometheus)
+        run: python3 scripts/validate_observability_assets.py
+
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:

@@ -19,6 +19,11 @@ http() {
   fi
 }
 
+# Kibana _import returns JSON with "success": true|false; do not match false positives via grep '"success"'.
+kibana_import_succeeded() {
+  grep -qE '"success"[[:space:]]*:[[:space:]]*true' <<<"$1"
+}
+
 echo "=== ELK initialization ==="
 
 # 1. Create Kafka topic
@@ -71,14 +76,23 @@ done
 if [[ -d /elk-init/dashboards ]] && compgen -G /elk-init/dashboards/*.ndjson >/dev/null 2>&1; then
   echo ""
   echo "Importing Kibana dashboards (from elk/kibana-dashboards)..."
-  for f in $(ls -1 /elk-init/dashboards/*.ndjson 2>/dev/null | sort); do
-    [[ -f "$f" ]] || continue
-    if command -v curl &>/dev/null; then
-      curl -sS -X POST "$KIBANA_URL/api/saved_objects/_import?overwrite=true" \
+  if ! command -v curl &>/dev/null; then
+    echo "  WARN: curl not found; cannot import Kibana saved objects (install curl or run elk/provision-kibana.sh on the host)."
+  else
+    while IFS= read -r f; do
+      [[ -f "$f" ]] || continue
+      resp=$(curl -sS -X POST "$KIBANA_URL/api/saved_objects/_import?overwrite=true" \
         -H "kbn-xsrf: true" \
-        --form "file=@$f" | grep -q '"success"' && echo "  Imported $(basename "$f")" || echo "  Import skipped for $(basename "$f")"
-    fi
-  done
+        --form "file=@$f") || resp=""
+      if kibana_import_succeeded "$resp"; then
+        echo "  Imported $(basename "$f")"
+      else
+        echo "  Import failed for $(basename "$f") (Kibana API did not return success:true)." >&2
+        echo "$resp" | head -c 500 >&2 || true
+        echo "" >&2
+      fi
+    done < <(printf '%s\n' /elk-init/dashboards/*.ndjson 2>/dev/null | sort)
+  fi
 fi
 
 # 5. Fallback: create data view via API if not present (e.g. no ndjson import)

@@ -4,7 +4,10 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "id": null,
-  "links": [],
+  "links": [
+    { "asDropdown": false, "icon": "dashboard", "includeVars": false, "keepTime": true, "targetBlank": false, "title": "Application observability", "tooltip": "HTTP errors and reservation timers", "type": "link", "url": "/d/application-observability" },
+    { "asDropdown": false, "icon": "dashboard", "includeVars": false, "keepTime": true, "targetBlank": false, "title": "Pet Shop Overview", "tooltip": "Domain metrics", "type": "link", "url": "/d/pet-shop-overview" }
+  ],
   "liveNow": false,
   "panels": [
     {
@@ -251,7 +254,7 @@
     {
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "pointSize": 5 }, "unit": "s" }, "overrides": [] },
-      "gridPos": { "h": 6, "w": 12, "x": 6, "y": 34 },
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 46 },
       "id": 10,
       "options": { "legend": { "calcs": ["mean"], "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi" } },
       "targets": [
@@ -262,7 +265,7 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 46 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 52 },
       "id": 104,
       "panels": [],
       "title": "Prometheus",
@@ -271,7 +274,7 @@
     {
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "mappings": [{ "options": { "0": { "color": "red", "index": 0 } }, "type": "value" }, { "options": { "1": { "color": "green", "index": 0 } }, "type": "value" }], "unit": "short" }, "overrides": [] },
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 47 },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 53 },
       "id": 50,
       "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
       "pluginVersion": "11.0.0",
@@ -282,7 +285,7 @@
     {
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "unit": "short" }, "overrides": [] },
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 47 },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 53 },
       "id": 51,
       "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
       "pluginVersion": "11.0.0",
@@ -293,7 +296,7 @@
     {
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "pointSize": 5 }, "unit": "short" }, "overrides": [] },
-      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 51 },
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 57 },
       "id": 52,
       "options": { "legend": { "calcs": ["mean"], "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi" } },
       "targets": [
@@ -305,7 +308,7 @@
     {
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "pointSize": 5 }, "unit": "s" }, "overrides": [] },
-      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 51 },
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 57 },
       "id": 53,
       "options": { "legend": { "calcs": ["mean"], "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi" } },
       "targets": [

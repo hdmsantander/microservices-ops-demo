@@ -385,8 +385,11 @@ flowchart LR
 ```
 
 **Dashboards**:
-- **Pet Shop Overview**: Business metrics (adoptions, reservations, orders, latencies).
-- **Infrastructure**: Redis, Elasticsearch, Kafka, JVM, HTTP, Prometheus targets.
+- **Application observability**: HTTP 4xx/5xx rates, HTTP latency p95, reservation create/release/cleanup timers (Micrometer).
+- **Pet Shop Overview**: Business metrics (adoptions, reservations, orders, domain operation latencies).
+- **Infrastructure**: Redis, Elasticsearch, Kafka, JVM, HTTP (rate and average latency), Prometheus targets.
+
+Kibana imports **nine** saved dashboards for `application-logs*` (see [KIBANA_DASHBOARDS_PROPOSAL.md](KIBANA_DASHBOARDS_PROPOSAL.md)); pair with Grafana using [ELK_OPERATIONS.md](ELK_OPERATIONS.md).
 
 ---
 
@@ -421,3 +424,4 @@ flowchart LR
 | [CONTAINER_SETUP.md](CONTAINER_SETUP.md) | Container setup, environment, ports, startup flow |
 | [PROFILING.md](PROFILING.md) | Load testing with Gatling |
 | [KIBANA_DASHBOARDS_PROPOSAL.md](KIBANA_DASHBOARDS_PROPOSAL.md) | Proposed Kibana dashboards |
+| [ELK_OPERATIONS.md](ELK_OPERATIONS.md) | Logs vs metrics/traces, Kibana best practices, SRE framing |

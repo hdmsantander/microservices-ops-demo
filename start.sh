@@ -1,6 +1,7 @@
 #!/bin/bash
 # microservices-ops-demo startup script
 # Usage: ./start.sh [minimal|full|profile] [--skip-tests] [--tests-only] [--mvnw]
+# Runs scripts/validate_observability_assets.py before builds (--tests-only, full, profile, minimal).
 
 set -euo pipefail
 
@@ -146,6 +147,15 @@ check_ports_available() {
     fi
 }
 
+# Static checks for Grafana/Kibana NDJSON/Prometheus (no Docker). Part of the same suite as --tests-only.
+run_observability_validation() {
+    phase "Observability assets validation"
+    command -v python3 &>/dev/null || fail "python3 is required (scripts/validate_observability_assets.py)"
+    local vscript="$SCRIPT_DIR/scripts/validate_observability_assets.py"
+    [[ -f "$vscript" ]] || fail "Missing $vscript"
+    (cd "$SCRIPT_DIR" && python3 "$vscript") || fail "Observability asset validation failed (fix Grafana JSON, Kibana NDJSON, or prometheus.yml)"
+}
+
 parse_args() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -182,8 +192,9 @@ parse_args() {
                 echo "  full      Build and start full stack (same as no args)"
                 echo "  --skip-tests  Skip tests when packaging microservices (full stack only)"
                 echo "  profile    Start full stack, run load profiling, generate report"
-                echo "  --tests-only  Run tests only for microservices (no Docker)"
+                echo "  --tests-only  Run observability asset checks + tests only for microservices (no Docker)"
                 echo "  --mvnw     Use Maven wrapper (./mvnw) instead of system mvn (auto in cloud: CI, CURSOR_RUNTIME)"
+                echo "  Observability: scripts/validate_observability_assets.py runs before minimal/full/profile/--tests-only"
                 exit 1
                 ;;
         esac
@@ -191,6 +202,7 @@ parse_args() {
 }
 
 start_minimal() {
+    run_observability_validation
     phase "Port check"
     echo "Checking required ports are available..."
     check_ports_available "$PORTS_MINIMAL" || fail "Required ports in use"
@@ -202,6 +214,7 @@ start_minimal() {
 }
 
 run_tests_only() {
+    run_observability_validation
     phase "Testing"
     local mvn_q="$(get_mvn query-microservice)"
     local mvn_i="$(get_mvn inventory-microservice)"
@@ -271,6 +284,7 @@ print_coverage_summary() {
 }
 
 start_full() {
+    run_observability_validation
     local mvn_q="$(get_mvn query-microservice)"
     local mvn_i="$(get_mvn inventory-microservice)"
     local mvn_a="$(get_mvn admin-server)"
@@ -314,6 +328,8 @@ run_profile() {
     echo "3. Running Gatling load test (duration=${PROFILE_DURATION}s, rate=${PROFILE_RATE})..."
     echo "4. Generating report..."
     echo ""
+
+    run_observability_validation
 
     phase "Port check"
     check_ports_available "$PORTS_FULL" || fail "Required ports in use"
@@ -394,7 +410,7 @@ case "$MODE" in
         echo "  minimal   Start infrastructure only (Kafka + Zipkin + Prometheus)"
         echo "  full      Build and start full stack (same as no args)"
         echo "  --skip-tests  Skip tests when packaging microservices (full stack only)"
-        echo "  --tests-only  Run tests only for microservices (no Docker)"
+        echo "  --tests-only  Run observability checks + tests only for microservices (no Docker)"
         exit 1
         ;;
 esac
